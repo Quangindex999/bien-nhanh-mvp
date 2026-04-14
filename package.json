@@ -1,0 +1,19 @@
+{
+  "name": "bien-nhanh",
+  "version": "1.0.0",
+  "description": "Biến Nhanh – Input → Output Workspace micro-SaaS",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.2",
+    "pdf-parse": "^1.1.1"
+  }
+}
