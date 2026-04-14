@@ -1,4 +1,4 @@
-import pdfParse from 'pdf-parse';
+import pdfParse from 'pdf-parse-fork';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /* ── Khởi tạo Gemini client ── */
@@ -56,8 +56,10 @@ export const handlePdfUpload = async (req, res, _next) => {
     }
 
     /* ── 1. Parse PDF buffer ── */
+    console.log('- Đang bắt đầu parse PDF...');
     const pdfData  = await pdfParse(file.buffer);
     const fullText = pdfData?.text?.trim() ?? '';
+    console.log('- Nội dung text lấy được (10 ký tự đầu):', fullText.substring(0, 10));
 
     if (!fullText) {
       return res.status(422).json({
