@@ -67,31 +67,49 @@ export const handlePdfUpload = async (req, res, _next) => {
     }
     console.log('- Nội dung text lấy được (10 ký tự đầu):', fullText.substring(0, 10));
 
-    /* ── 2. TẠM THỜI: Dùng Mock Data thay cho Gemini AI ── */
-    // Mock data dùng khi AI chưa được tích hợp hoặc pdf-parse trả rỗng trên server
-    const parsedData = {
-      summaryStats: {
-        estimatedStudyTime: "15 phút",
-        difficultyScore: 6,
-        timeSaved: "45 phút"
-      },
-      flashcards: [
-        { id: 1, front: "Node.js là gì?", back: "Một môi trường runtime JavaScript đa nền tảng mã nguồn mở dựa trên V8 engine." },
-        { id: 2, front: "Express.js là gì?", back: "Một framework web backend nhanh, linh hoạt và tối giản dành cho Node.js." },
-        { id: 3, front: "Middleware trong Express là gì?", back: "Các hàm có quyền truy cập vào các đối tượng request (req), response (res), và hàm middleware tiếp theo (next)." }
-      ]
-    };
+    if (!fullText) {
+      return res.status(422).json({
+        success: false,
+        message: 'Không đọc được nội dung chữ từ file PDF này để gửi cho AI (có thể file chỉ chứa hình ảnh).',
+      });
+    }
 
-    /* ── 4. Trả kết quả về Frontend ── */
+    /* ── 2. Kích hoạt Gemini API ── */
+    console.log('- Đang gửi prompt tới Gemini AI...');
+    let parsedGeminiData = null;
+    let attempt = 1;
+    const MAX_RETRIES = 3;
+
+    while (attempt <= MAX_RETRIES) {
+      try {
+        console.log(`- Request AI lần ${attempt}/${MAX_RETRIES}...`);
+        const result = await model.generateContent(buildPrompt(fullText));
+        const aiResponse = result.response.text();
+        
+        let jsonStr = aiResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
+        parsedGeminiData = JSON.parse(jsonStr);
+        console.log('- Gemini trả về JSON hợp lệ!');
+        break; 
+      } catch (err) {
+        console.warn(`[Lần ${attempt}] Lỗi gọi Gemini hoặc parse JSON:`, err?.message);
+        attempt++;
+        if (attempt > MAX_RETRIES) {
+          throw new Error('Không thể tạo Flashcards sau nhiều lần thử với AI.');
+        }
+      }
+    }
+
+    /* ── 3. Trả kết quả về Frontend ── */
     return res.status(200).json({
       success: true,
       message: 'Tạo Flashcards thành công!',
       data: {
-        fileName:   Buffer.from(file.originalname, 'latin1').toString('utf8'),
-        totalPages: pdfData?.numpages ?? 0,
+        fileName: file.originalname,
+        totalPages: pdfData?.numpages || 0,
         totalChars: fullText.length,
-        ...parsedData,
-      },
+        summaryStats: parsedGeminiData.summaryStats,
+        flashcards: parsedGeminiData.flashcards
+      }
     });
 
   } catch (error) {
