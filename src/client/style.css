@@ -16,20 +16,29 @@
 }
 
 /* ══════════════════════════════════════
-   Biến Nhanh — Custom Styles
+   Biến Nhanh — Custom Styles v2
    ══════════════════════════════════════ */
+
 /* ── Animations ── */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(24px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 0 0 rgba(51, 141, 255, 0); }
   50%      { box-shadow: 0 0 24px 4px rgba(51, 141, 255, 0.15); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 .animate-fade-in {
@@ -39,33 +48,185 @@
   animation: slide-up 0.5s ease-out both;
 }
 
-/* ── Flashcard Flip Effects ── */
-.perspective-1000 {
-  perspective: 1000px;
+/* ═══════════════════════════════════
+   3D Flashcard System
+   ═══════════════════════════════════ */
+
+/* Card wrapper — stagger animation */
+.flashcard-wrapper {
+  animation: card-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  cursor: pointer;
 }
+
+/* Perspective container */
+.perspective-card {
+  perspective: 1200px;
+  width: 100%;
+  height: 220px;
+}
+
+/* Inner card (both faces) */
 .flashcard-inner {
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-style: preserve-3d;
   position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
 }
+
 .flashcard-inner.flipped {
   transform: rotateY(180deg);
 }
+
+/* Shared face styles */
 .flashcard-face {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-}
-.flashcard-front {
-  z-index: 2;
-  transform: rotateY(0deg);
-}
-.flashcard-back {
-  transform: rotateY(180deg);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
 }
 
-/* ── Drop zone active state (drag over) ── */
+/* Front face */
+.flashcard-front {
+  z-index: 2;
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.flashcard-front:hover {
+  border-color: rgba(51, 141, 255, 0.3);
+  box-shadow:
+    0 8px 25px -5px rgba(51, 141, 255, 0.15),
+    0 4px 6px -4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Back face */
+.flashcard-back {
+  transform: rotateY(180deg);
+  background: linear-gradient(145deg, rgba(24, 62, 143, 0.25), rgba(19, 39, 87, 0.35));
+  border: 1px solid rgba(51, 141, 255, 0.2);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(51, 141, 255, 0.1);
+}
+
+/* Card badge (Q.1 / A.1) */
+.card-badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 1rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.card-badge-q {
+  color: rgba(89, 175, 255, 0.9);
+  background: rgba(51, 141, 255, 0.1);
+}
+.card-badge-a {
+  color: rgba(52, 211, 153, 0.9);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+/* Card content area */
+.card-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 0.25rem;
+  width: 100%;
+}
+.card-content-back {
+  overflow-y: auto;
+}
+
+/* Question text */
+.card-question {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 1);
+  line-height: 1.5;
+  padding: 0 0.25rem;
+}
+
+/* Answer text */
+.card-answer {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgba(226, 232, 240, 0.95);
+  line-height: 1.65;
+  padding: 0 0.25rem;
+}
+
+/* Hint text at bottom */
+.card-hint {
+  position: absolute;
+  bottom: 0.65rem;
+  font-size: 0.625rem;
+  color: rgba(100, 116, 139, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  transition: color 0.3s;
+}
+.card-hint-back {
+  color: rgba(51, 141, 255, 0.5);
+}
+
+.flashcard-wrapper:hover .card-hint {
+  color: rgba(51, 141, 255, 0.7);
+}
+
+/* ═══════════════════════════════════
+   Stat Badges hover shimmer
+   ═══════════════════════════════════ */
+.stat-badge::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.03) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.stat-badge:hover::after {
+  opacity: 1;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════
+   Drop zone active state
+   ═══════════════════════════════════ */
 #dropZone.drag-over {
   border-color: rgba(51, 141, 255, 0.6);
   background-color: rgba(51, 141, 255, 0.06);
@@ -75,7 +236,9 @@
   transform: scale(1.15);
 }
 
-/* ── Scrollbar ── */
+/* ═══════════════════════════════════
+   Scrollbar
+   ═══════════════════════════════════ */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -88,6 +251,15 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.15);
+}
+
+/* Flashcard back scroll */
+.card-content-back::-webkit-scrollbar {
+  width: 4px;
+}
+.card-content-back::-webkit-scrollbar-thumb {
+  background: rgba(51, 141, 255, 0.2);
+  border-radius: 999px;
 }
 
 /* ── Selection ── */
@@ -103,4 +275,19 @@ body {
 }
 main {
   flex: 1;
+}
+
+/* ═══════════════════════════════════
+   Responsive tweaks
+   ═══════════════════════════════════ */
+@media (max-width: 640px) {
+  .perspective-card {
+    height: 200px;
+  }
+  .card-question {
+    font-size: 0.8125rem;
+  }
+  .card-answer {
+    font-size: 0.75rem;
+  }
 }
