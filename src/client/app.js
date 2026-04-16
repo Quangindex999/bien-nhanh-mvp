@@ -24,6 +24,34 @@ const flashcardsGrid    = $('#flashcardsGrid');
 const errorCard         = $('#errorCard');
 const errorMsg          = $('#errorMessage');
 
+const tabFlashcards       = $('#tabFlashcards');
+const tabQuiz             = $('#tabQuiz');
+const flashcardsContainer = $('#flashcardsContainer');
+const quizContainer       = $('#quizContainer');
+const quizCount           = $('#quizCount');
+const quizList            = $('#quizList');
+
+/* ══════════════════
+   Tabs Logic
+   ══════════════════ */
+
+const switchTab = (tab) => {
+  if (tab === 'flashcards') {
+    if(tabFlashcards) tabFlashcards.className = "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-brand-500 text-white shadow-lg shadow-brand-500/30";
+    if(tabQuiz) tabQuiz.className = "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10";
+    if(flashcardsContainer) flashcardsContainer.classList.remove('hidden');
+    if(quizContainer) quizContainer.classList.add('hidden');
+  } else {
+    if(tabQuiz) tabQuiz.className = "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-brand-500 text-white shadow-lg shadow-brand-500/30";
+    if(tabFlashcards) tabFlashcards.className = "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10";
+    if(quizContainer) quizContainer.classList.remove('hidden');
+    if(flashcardsContainer) flashcardsContainer.classList.add('hidden');
+  }
+};
+
+tabFlashcards?.addEventListener('click', () => switchTab('flashcards'));
+tabQuiz?.addEventListener('click', () => switchTab('quiz'));
+
 let selectedFile = null;
 
 /* ══════════════════
@@ -159,6 +187,71 @@ const renderFlashcard = (card, index) => {
 };
 
 /* ══════════════════
+   Quiz Renderer
+   ══════════════════ */
+
+const renderQuiz = (quiz, index) => {
+  const card = document.createElement('div');
+  card.className = 'bg-white/5 border border-white/10 rounded-2xl p-6 transition-all duration-300 hover:border-emerald-500/30 shadow-lg shadow-black/20';
+
+  const questionHeader = document.createElement('h4');
+  questionHeader.className = 'text-lg font-semibold text-slate-100 mb-5 leading-relaxed';
+  questionHeader.innerHTML = `<span class="text-emerald-400 font-bold mr-2">Câu ${index + 1}:</span> ${quiz.question}`;
+  card.appendChild(questionHeader);
+
+  const optionsGrid = document.createElement('div');
+  optionsGrid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4';
+
+  let hasAnswered = false;
+
+  const explElement = document.createElement('div');
+  explElement.className = 'hidden mt-4 p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 text-sm text-slate-300 leading-relaxed';
+  explElement.innerHTML = `<span class="font-semibold text-white">Giải thích:</span> ${quiz.explanation}`;
+
+  const optionBtns = quiz.options.map((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'text-left px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:border-emerald-500/50 transition-all duration-200 text-sm font-medium';
+    btn.textContent = `${String.fromCharCode(65 + i)}. ${opt}`;
+    // Store original option for comparison
+    btn.dataset.original = opt;
+
+    btn.addEventListener('click', () => {
+      if (hasAnswered) return;
+      hasAnswered = true;
+
+      // Reveal explanation
+      explElement.classList.remove('hidden');
+      explElement.classList.add('animate-fade-in');
+
+      const isCorrect = opt === quiz.correctAnswer;
+      
+      // Update all buttons colors
+      optionBtns.forEach(b => {
+        b.disabled = true;
+        b.classList.remove('hover:bg-white/10', 'hover:border-emerald-500/50');
+        b.classList.add('cursor-default', 'opacity-70');
+        
+        if (b.dataset.original === quiz.correctAnswer) {
+          // Highlight correct answer green
+          b.className = 'text-left px-5 py-3 rounded-xl border transition-all duration-500 text-sm font-semibold bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]';
+        } else if (b === btn && !isCorrect) {
+          // Highlight selected wrong answer red
+          b.className = 'text-left px-5 py-3 rounded-xl border transition-all duration-500 text-sm font-medium bg-red-500/20 border-red-500/50 text-red-300';
+        }
+      });
+    });
+
+    return btn;
+  });
+
+  optionBtns.forEach(btn => optionsGrid.appendChild(btn));
+  card.appendChild(optionsGrid);
+  card.appendChild(explElement);
+
+  return card;
+};
+
+/* ══════════════════
    Drag & Drop
    ══════════════════ */
 
@@ -239,8 +332,9 @@ uploadBtn.addEventListener('click', async () => {
       throw new Error('AI không tạo được flashcard nào từ nội dung PDF này.');
     }
 
-    /* ── 1. Render file name ── */
-    resultFileName.textContent = data.fileName ? `Từ: ${data.fileName}` : '';
+    /* ── 1. Render title/file name ── */
+    const displayTitle = data.documentTitle || data.fileName || 'Tài liệu không tên';
+    resultFileName.textContent = `Nội dung: ${displayTitle}`;
 
     /* ── 2. Render Stats Badges ── */
     const statsValues = {
@@ -262,6 +356,17 @@ uploadBtn.addEventListener('click', async () => {
       const el = renderFlashcard(card, index);
       flashcardsGrid.appendChild(el);
     });
+
+    /* ── 3.1. Render Quizzes ── */
+    const quizzes = data.quizzes || [];
+    quizCount.textContent = quizzes.length;
+    quizList.innerHTML = '';
+    quizzes.forEach((quiz, index) => {
+      quizList.appendChild(renderQuiz(quiz, index));
+    });
+    
+    // Reset tabs to default (flashcards)
+    switchTab('flashcards');
 
     /* ── 4. Show result ── */
     resultSection.classList.remove('hidden');

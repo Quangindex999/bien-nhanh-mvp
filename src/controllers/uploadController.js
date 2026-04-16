@@ -7,12 +7,13 @@ const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
 /* ── System prompt: ép AI trả JSON thuần, không markdown ── */
 const buildPrompt = (text) => `
-Bạn là một chuyên gia giáo dục hàng đầu. Nhiệm vụ của bạn là phân tích nội dung tài liệu học tập dưới đây và tạo ra một bộ Flashcards chất lượng cao giúp người học ghi nhớ hiệu quả.
+Bạn là một chuyên gia giáo dục hàng đầu. Nhiệm vụ của bạn là phân tích nội dung tài liệu học tập dưới đây và tạo ra một bộ Flashcards và Câu hỏi Trắc nghiệm chất lượng cao giúp người học ghi nhớ hiệu quả.
 
 YÊU CẦU BẮT BUỘC:
 1. Trả về DUY NHẤT một JSON object hợp lệ, KHÔNG có markdown, KHÔNG có \`\`\`json, KHÔNG có bất kỳ text nào bên ngoài JSON.
 2. JSON phải tuân theo CHÍNH XÁC cấu trúc sau:
 {
+  "documentTitle": "<Tiêu đề chính của tài liệu, tự trích xuất từ nội dung>",
   "summaryStats": {
     "estimatedStudyTime": "<thời gian ước tính để học, ví dụ: 15 phút>",
     "difficultyScore": <điểm độ khó từ 1 đến 10>,
@@ -24,11 +25,23 @@ YÊU CẦU BẮT BUỘC:
       "front": "<câu hỏi ngắn gọn, rõ ràng>",
       "back": "<câu trả lời súc tích, dễ nhớ>"
     }
+  ],
+  "quizzes": [
+    {
+      "id": 1,
+      "question": "Câu hỏi trắc nghiệm...",
+      "options": ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"],
+      "correctAnswer": "Đáp án A",
+      "explanation": "Giải thích ngắn gọn tại sao A đúng..."
+    }
   ]
 }
-3. Tạo từ 5 đến 15 flashcards, ưu tiên các khái niệm cốt lõi.
-4. Mỗi flashcard phải có "front" là câu hỏi và "back" là câu trả lời.
-5. Viết bằng cùng ngôn ngữ với nội dung tài liệu.
+3. "documentTitle" phải được trích xuất một cách thông minh từ tiêu đề chính hoặc nội dung quan trọng nhất của tài liệu.
+4. Tạo từ 5 đến 15 flashcards, ưu tiên các khái niệm cốt lõi.
+5. Mỗi flashcard phải có "front" là câu hỏi và "back" là câu trả lời.
+6. Tạo từ 5 đến 10 câu trắc nghiệm (quizzes) chất lượng.
+7. Options trong quizzes phải gồm 4 lựa chọn, correctAnswer phải khớp HOÀN TOÀN với 1 trong 4 lựa chọn đó.
+8. Viết bằng cùng ngôn ngữ với nội dung tài liệu.
 
 NỘI DUNG TÀI LIỆU:
 ---
@@ -42,9 +55,12 @@ ${text}
 export const handlePdfUpload = async (req, res, _next) => {
   try {
     const file = req?.file;
+    
+    // Fix encoding for Vietnamese filename
+    const safeFileName = file ? Buffer.from(file.originalname, 'latin1').toString('utf8') : '';
 
     console.log("=== KIỂM TRA FILE UPLOAD ===");
-    console.log("- Tên file:", file?.originalname);
+    console.log("- Tên file (đã fix code):", safeFileName);
     console.log("- Dung lượng:", file?.size, "bytes");
     console.log("- Mimetype:", file?.mimetype);
 
@@ -104,11 +120,13 @@ export const handlePdfUpload = async (req, res, _next) => {
       success: true,
       message: 'Tạo Flashcards thành công!',
       data: {
-        fileName: file.originalname,
+        fileName: safeFileName,
+        documentTitle: parsedGeminiData.documentTitle || null,
         totalPages: pdfData?.numpages || 0,
         totalChars: fullText.length,
         summaryStats: parsedGeminiData.summaryStats,
-        flashcards: parsedGeminiData.flashcards
+        flashcards: parsedGeminiData.flashcards,
+        quizzes: parsedGeminiData.quizzes
       }
     });
 
