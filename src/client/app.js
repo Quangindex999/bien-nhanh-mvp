@@ -211,7 +211,7 @@ const renderQuiz = (quiz, index) => {
   const optionBtns = quiz.options.map((opt, i) => {
     const btn = document.createElement('button');
     btn.className = 'text-left px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:border-emerald-500/50 transition-all duration-200 text-sm font-medium';
-    btn.textContent = `${String.fromCharCode(65 + i)}. ${opt}`;
+    btn.textContent = opt;
     // Store original option for comparison
     btn.dataset.original = opt;
 
