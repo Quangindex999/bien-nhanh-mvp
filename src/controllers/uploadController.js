@@ -1,5 +1,7 @@
 import pdfParse from 'pdf-parse-fork';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import crypto from 'crypto';
+import { supabase } from '../config/supabase.js';
 
 /* ── Khởi tạo Gemini client ── */
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '');
@@ -13,7 +15,7 @@ YÊU CẦU BẮT BUỘC:
 1. Trả về DUY NHẤT một JSON object hợp lệ, KHÔNG có markdown, KHÔNG có \`\`\`json, KHÔNG có bất kỳ text nào bên ngoài JSON.
 2. JSON phải tuân theo CHÍNH XÁC cấu trúc sau:
 {
-  "documentTitle": "<Tiêu đề chính của tài liệu, tự trích xuất từ nội dung>",
+  "documentTitle": "<Tiêu đề tài liệu chuẩn Tiếng Việt, tự trích xuất từ nội dung>",
   "summaryStats": {
     "estimatedStudyTime": "<thời gian ước tính để học, ví dụ: 15 phút>",
     "difficultyScore": <điểm độ khó từ 1 đến 10>,
@@ -71,6 +73,42 @@ export const handlePdfUpload = async (req, res, _next) => {
       });
     }
 
+    /* ── Tạo mã vân tay (File Hash) ── */
+    const fileHash = crypto.createHash('sha256').update(file.buffer).digest('hex');
+    console.log(`- File Hash: ${fileHash}`);
+
+    /* ── Kiểm tra "Trí nhớ" (Check Supabase Cache) ── */
+    try {
+      const { data: cachedData, error: cacheError } = await supabase
+        .from('study_materials')
+        .select('*')
+        .eq('file_hash', fileHash)
+        .single();
+        
+      if (!cacheError && cachedData) {
+        console.log('- Dữ liệu lấy từ Supabase Cache');
+        
+        // Đảm bảo sử dụng documentTitle để tránh lỗi font
+        const displayTitle = cachedData.documentTitle || cachedData.file_name || safeFileName;
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Tạo Flashcards thành công (từ Cache)!',
+          data: {
+            fileName: safeFileName,
+            documentTitle: displayTitle,
+            totalPages: cachedData.summaryStats?.totalPages || 0,
+            totalChars: 0,
+            summaryStats: cachedData.summaryStats,
+            flashcards: cachedData.flashcards,
+            quizzes: cachedData.quizzes
+          }
+        });
+      }
+    } catch (dbErr) {
+      console.warn('- Lỗi khi check cache Supabase:', dbErr.message);
+    }
+
     /* ── 1. Parse PDF buffer ── */
     console.log('- Đang bắt đầu parse PDF...');
     let pdfData = null;
@@ -115,13 +153,37 @@ export const handlePdfUpload = async (req, res, _next) => {
       }
     }
 
-    /* ── 3. Trả kết quả về Frontend ── */
+    const finalDocumentTitle = parsedGeminiData.documentTitle || safeFileName;
+
+    /* ── 3. Lưu lại thành quả (Save to Supabase) ── */
+    try {
+      const { error: upsertError } = await supabase
+        .from('study_materials')
+        .upsert({
+          file_hash: fileHash,
+          file_name: safeFileName,
+          documentTitle: finalDocumentTitle,
+          summaryStats: parsedGeminiData.summaryStats,
+          flashcards: parsedGeminiData.flashcards,
+          quizzes: parsedGeminiData.quizzes
+        }, { onConflict: 'file_hash' });
+
+      if (upsertError) {
+        console.warn('- Lỗi khi lưu vào Supabase:', upsertError.message);
+      } else {
+        console.log('- Đã lưu dữ liệu vào Supabase thành công!');
+      }
+    } catch (saveErr) {
+      console.warn('- Lỗi Exception khi lưu Supabase:', saveErr.message);
+    }
+
+    /* ── 4. Trả kết quả về Frontend ── */
     return res.status(200).json({
       success: true,
       message: 'Tạo Flashcards thành công!',
       data: {
         fileName: safeFileName,
-        documentTitle: parsedGeminiData.documentTitle || null,
+        documentTitle: finalDocumentTitle,
         totalPages: pdfData?.numpages || 0,
         totalChars: fullText.length,
         summaryStats: parsedGeminiData.summaryStats,
