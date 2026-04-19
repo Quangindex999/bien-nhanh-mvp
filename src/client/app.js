@@ -486,17 +486,33 @@ uploadBtn.addEventListener('click', async () => {
 
     const flashcards = Array.isArray(data.flashcards) ? data.flashcards : [];
     const quizzes = Array.isArray(data.quizzes) ? data.quizzes : [];
-    const stats = data.summary_stats || {};
-    const summaryText = stats.onePageSummary ?? '';
-    const studyPlan = Array.isArray(stats.studyPlan) ? stats.studyPlan : [];
+    const stats = data.summaryStats || data.summary_stats || {};
+
+    // 1. Lấy Tiêu đề
+    const docTitle = data.documentTitle || data.document_title || data.fileName || data.file_name || 'Tài liệu không tên';
+    resultFileName.textContent = `Nội dung: ${docTitle}`;
+
+    // 2. Lấy Tóm tắt (Bao trùm cả camelCase, snake_case và nằm ngoài data)
+    const summaryData = data.onePageSummary ||
+      (data.summaryStats && data.summaryStats.onePageSummary) ||
+      (data.summary_stats && data.summary_stats.onePageSummary) ||
+      (data.summaryStats && data.summaryStats.one_page_summary) ||
+      (data.summary_stats && data.summary_stats.one_page_summary) ||
+      '';
+
+    // 3. Lấy Lịch ôn thi
+    const studyPlanData = data.studyPlan ||
+      (data.summaryStats && data.summaryStats.studyPlan) ||
+      (data.summary_stats && data.summary_stats.studyPlan) ||
+      (data.summaryStats && data.summaryStats.study_plan) ||
+      (data.summary_stats && data.summary_stats.study_plan) ||
+      [];
 
     if (flashcards.length === 0) {
       throw new Error('AI không tạo được flashcard nào từ nội dung PDF này.');
     }
 
-    /* ── 1. Render title/file name ── */
-    const displayTitle = data.document_title || data.fileName || 'Tài liệu không tên';
-    resultFileName.textContent = `Nội dung: ${displayTitle}`;
+    /* ── 2. Render Stats Badges ── */
 
     /* ── 2. Render Stats Badges ── */
     const statsValues = {
@@ -510,8 +526,8 @@ uploadBtn.addEventListener('click', async () => {
       .map(cfg => renderStatBadge(cfg, statsValues[cfg.key]))
       .join('');
 
-    renderSummary(summaryText);
-    renderStudyPlan(studyPlan);
+    renderSummary(summaryData);
+    renderStudyPlan(studyPlanData);
 
     /* ── 3. Render Flashcards ── */
     cardCount.textContent = flashcards.length;
