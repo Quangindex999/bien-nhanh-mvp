@@ -330,14 +330,13 @@ const renderStudyPlan = (studyPlan = []) => {
   }
 
   studyPlanList.innerHTML = `
-    <div class="relative pl-10 sm:pl-12">
-      <div class="absolute left-4 sm:left-5 top-0 bottom-0 w-px -translate-x-1/2 bg-linear-to-b from-purple-500/60 via-brand-500/30 to-transparent"></div>
+    <div class="relative border-l-2 border-purple-500 ml-4">
       ${safePlan.map((day) => {
         const tasks = Array.isArray(day.tasks) ? day.tasks : [];
         return `
-        <div class="relative mb-5 last:mb-0">
-          <div class="absolute left-4 sm:left-5 top-5 -translate-x-1/2 flex items-center justify-center w-4 h-4 rounded-full bg-purple-400 ring-4 ring-purple-500/10 shadow-[0_0_0_1px_rgba(192,132,252,0.15)]"></div>
-          <div class="glass-panel rounded-2xl p-5 sm:p-6 border border-white/10 bg-white/5 dark:bg-white/5 backdrop-blur-xl ml-3 sm:ml-4">
+        <div class="relative mb-8 ml-8">
+          <div class="absolute w-4 h-4 rounded-full bg-purple-500 -left-[2.35rem] top-1.5 ring-4 ring-purple-500/10 shadow-[0_0_0_1px_rgba(168,85,247,0.2)]"></div>
+          <div class="glass-panel rounded-2xl p-5 sm:p-6 border border-white/10 bg-white/5 dark:bg-white/5 backdrop-blur-xl">
             <div class="flex flex-wrap items-center gap-3 mb-3">
               <span class="px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 text-xs font-semibold">Ngày ${escapeHtml(day.day ?? '—')}</span>
               <h4 class="font-bold text-slate-900 dark:text-white">${escapeHtml(day.title ?? 'Đang cập nhật')}</h4>
