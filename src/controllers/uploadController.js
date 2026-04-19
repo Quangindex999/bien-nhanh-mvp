@@ -99,9 +99,9 @@ export const handlePdfUpload = async (req, res, _next) => {
       if (!cacheError && cachedData) {
         console.log('- Dữ liệu lấy từ Supabase Cache');
         
-        // Đảm bảo sử dụng documentTitle để tránh lỗi font
-        const displayTitle = cachedData.documentTitle || cachedData.file_name || safeFileName;
-        const cachedSummaryStats = cachedData.summaryStats ?? {};
+        // Đảm bảo sử dụng document_title để tránh lệch schema
+        const displayTitle = cachedData.document_title || cachedData.file_name || safeFileName;
+        const cachedSummaryStats = cachedData.summary_stats ?? {};
         
         return res.status(200).json({
           success: true,
@@ -109,7 +109,7 @@ export const handlePdfUpload = async (req, res, _next) => {
           data: {
             fileName: safeFileName,
             documentTitle: displayTitle,
-            totalPages: cachedData.summaryStats?.totalPages || 0,
+            totalPages: cachedSummaryStats?.totalPages || 0,
             totalChars: 0,
             summaryStats: cachedSummaryStats,
             onePageSummary: cachedSummaryStats.onePageSummary ?? '',
@@ -186,8 +186,8 @@ export const handlePdfUpload = async (req, res, _next) => {
         .upsert({
           file_hash: fileHash,
           file_name: safeFileName,
-          documentTitle: finalDocumentTitle,
-          summaryStats: finalSummaryStats,
+          document_title: finalDocumentTitle,
+          summary_stats: finalSummaryStats,
           flashcards: parsedGeminiData.flashcards,
           quizzes: parsedGeminiData.quizzes
         }, { onConflict: 'file_hash' });

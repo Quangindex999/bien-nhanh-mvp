@@ -335,105 +335,101 @@
           </button>
         </div>
 
-        <div id="summaryContainer" class="hidden">
-        </div>
+        <div id="tabPanels" class="space-y-8">
+          <div id="summaryContainer" class="hidden mb-8">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <svg class="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5v15m4.5-15v15m-9-15v15m-4.5-15v15M4.5 9h15M4.5 15h15" />
+                </svg>
+              </div>
+              <p class="text-sm font-semibold text-slate-300">
+                Tóm tắt 1 trang
+              </p>
+            </div>
+            <div id="summaryContent" class="glass-panel prose-panel rounded-2xl p-6 md:p-8"></div>
+          </div>
 
-        <div id="flashcardsContainer">
-          <!-- Flashcards section title -->
-          <div class="flex items-center gap-3 mb-5">
-            <div
-              class="w-7 h-7 rounded-lg bg-brand-500/10 flex items-center justify-center"
-            >
-              <svg
-                class="w-4 h-4 text-brand-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
+          <div id="flashcardsContainer">
+            <!-- Flashcards section title -->
+            <div class="flex items-center gap-3 mb-5">
+              <div
+                class="w-7 h-7 rounded-lg bg-brand-500/10 flex items-center justify-center"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
-                />
-              </svg>
-            </div>
-            <p class="text-sm font-semibold text-slate-300">
-              Bộ Flashcards ·
-              <span id="cardCount" class="text-brand-400">0</span> thẻ
-            </p>
-            <p
-              class="ml-auto text-[11px] text-slate-600 italic hidden sm:block"
-            >
-              Click vào thẻ để lật xem đáp án
-            </p>
-          </div>
-
-          <!-- Flashcards Grid -->
-          <div
-            id="flashcardsGrid"
-            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
-          ></div>
-        </div>
-
-        <!-- Summary Container -->
-        <div id="summaryContainer" class="hidden mb-8">
-          <div class="flex items-center gap-3 mb-5">
-            <div class="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <svg class="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5v15m4.5-15v15m-9-15v15m-4.5-15v15M4.5 9h15M4.5 15h15" />
-              </svg>
-            </div>
-            <p class="text-sm font-semibold text-slate-300">
-              Tóm tắt 1 trang
-            </p>
-          </div>
-          <div id="summaryContent" class="glass-panel prose-panel rounded-2xl p-6 md:p-8"></div>
-        </div>
-
-        <!-- Quiz Container -->
-        <div id="quizContainer" class="hidden">
-          <div class="flex items-center gap-3 mb-5">
-            <div
-              class="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center"
-            >
-              <svg
-                class="w-4 h-4 text-emerald-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
+                <svg
+                  class="w-4 h-4 text-brand-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
+                  />
+                </svg>
+              </div>
+              <p class="text-sm font-semibold text-slate-300">
+                Bộ Flashcards ·
+                <span id="cardCount" class="text-brand-400">0</span> thẻ
+              </p>
+              <p
+                class="ml-auto text-[11px] text-slate-600 italic hidden sm:block"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+                Click vào thẻ để lật xem đáp án
+              </p>
             </div>
-            <p class="text-sm font-semibold text-slate-300">
-              Bộ Trắc nghiệm ·
-              <span id="quizCount" class="text-emerald-400">0</span> câu
-            </p>
+
+            <!-- Flashcards Grid -->
+            <div
+              id="flashcardsGrid"
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+            ></div>
           </div>
 
-          <!-- Quiz List -->
-          <div id="quizList" class="flex flex-col gap-6"></div>
-        </div>
-
-        <!-- Study Plan Container -->
-        <div id="studyPlanContainer" class="hidden mt-2">
-          <div class="flex items-center gap-3 mb-5">
-            <div class="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center">
-              <svg class="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+          <div id="quizContainer" class="hidden">
+            <div class="flex items-center gap-3 mb-5">
+              <div
+                class="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center"
+              >
+                <svg
+                  class="w-4 h-4 text-emerald-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <p class="text-sm font-semibold text-slate-300">
+                Bộ Trắc nghiệm ·
+                <span id="quizCount" class="text-emerald-400">0</span> câu
+              </p>
             </div>
-            <p class="text-sm font-semibold text-slate-300">
-              Kế hoạch ôn thi
-            </p>
+
+            <!-- Quiz List -->
+            <div id="quizList" class="flex flex-col gap-6"></div>
           </div>
-          <div id="studyPlanList" class="relative"></div>
+
+          <div id="studyPlanContainer" class="hidden mt-2">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <svg class="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <p class="text-sm font-semibold text-slate-300">
+                Kế hoạch ôn thi
+              </p>
+            </div>
+            <div id="studyPlanList" class="relative"></div>
+          </div>
         </div>
       </section>
 

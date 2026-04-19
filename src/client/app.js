@@ -77,6 +77,7 @@ const flashcardsContainer = $('#flashcardsContainer');
 const quizContainer       = $('#quizContainer');
 const studyPlanContainer  = $('#studyPlanContainer');
 const studyPlanList       = $('#studyPlanList');
+const tabPanels           = $('#tabPanels');
 const quizCount           = $('#quizCount');
 const quizList            = $('#quizList');
 
@@ -307,9 +308,10 @@ const QUIZ_CLASS_MAP = {
 
 const renderSummary = (summaryText) => {
   if (!summaryContent) return;
+  const content = typeof summaryText === 'string' ? summaryText.trim() : '';
   summaryContent.innerHTML = `
     <div class="summary-content text-[15px] leading-7 text-slate-700 dark:text-slate-300">
-      ${summaryText ? formatSummaryMarkdown(summaryText) : '<p class="text-slate-500 dark:text-slate-400">Chưa có nội dung tóm tắt.</p>'}
+      ${content ? formatSummaryMarkdown(content) : '<p class="text-slate-500 dark:text-slate-400">Đang cập nhật</p>'}
     </div>
   `;
 };
@@ -317,27 +319,35 @@ const renderSummary = (summaryText) => {
 const renderStudyPlan = (studyPlan = []) => {
   if (!studyPlanList) return;
   if (!Array.isArray(studyPlan) || studyPlan.length === 0) {
-    studyPlanList.innerHTML = '<p class="text-slate-500 dark:text-slate-400">Chưa có kế hoạch ôn thi.</p>';
+    studyPlanList.innerHTML = '<p class="text-slate-500 dark:text-slate-400">Không có dữ liệu</p>';
+    return;
+  }
+
+  const safePlan = studyPlan.filter((day) => day && typeof day === 'object');
+  if (safePlan.length === 0) {
+    studyPlanList.innerHTML = '<p class="text-slate-500 dark:text-slate-400">Không có dữ liệu</p>';
     return;
   }
 
   studyPlanList.innerHTML = `
     <div class="relative pl-6">
       <div class="absolute left-2 top-0 bottom-0 w-px bg-linear-to-b from-purple-500/60 via-brand-500/30 to-transparent"></div>
-      ${studyPlan.map((day) => `
+      ${safePlan.map((day) => {
+        const tasks = Array.isArray(day.tasks) ? day.tasks : [];
+        return `
         <div class="relative mb-5 last:mb-0">
           <div class="absolute left-[-1.9rem] top-4 w-4 h-4 rounded-full bg-purple-400 ring-4 ring-purple-500/10"></div>
           <div class="glass-panel rounded-2xl p-5 border border-white/10 bg-white/5 dark:bg-white/5 backdrop-blur-xl">
             <div class="flex flex-wrap items-center gap-3 mb-3">
-              <span class="px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 text-xs font-semibold">Ngày ${escapeHtml(day.day)}</span>
-              <h4 class="font-bold text-slate-900 dark:text-white">${escapeHtml(day.title ?? `Ngày ${day.day}`)}</h4>
+              <span class="px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 text-xs font-semibold">Ngày ${escapeHtml(day.day ?? '—')}</span>
+              <h4 class="font-bold text-slate-900 dark:text-white">${escapeHtml(day.title ?? 'Đang cập nhật')}</h4>
             </div>
             <ul class="space-y-2">
-              ${(day.tasks ?? []).map((task) => `<li class="flex gap-3 text-slate-700 dark:text-slate-300"><span class="mt-2 w-2 h-2 rounded-full bg-brand-400 shrink-0"></span><span>${escapeHtml(task)}</span></li>`).join('')}
+              ${tasks.length ? tasks.map((task) => `<li class="flex gap-3 text-slate-700 dark:text-slate-300"><span class="mt-2 w-2 h-2 rounded-full bg-brand-400 shrink-0"></span><span>${escapeHtml(task)}</span></li>`).join('') : '<li class="text-slate-500 dark:text-slate-400">Không có dữ liệu</li>'}
             </ul>
           </div>
         </div>
-      `).join('')}
+      `;}).join('')}
     </div>
   `;
 };
@@ -474,18 +484,18 @@ uploadBtn.addEventListener('click', async () => {
       throw new Error('Response không chứa dữ liệu.');
     }
 
-    const flashcards = data.flashcards || [];
-    const quizzes = data.quizzes || [];
-    const stats = data.summaryStats || {};
-    const summaryText = data.onePageSummary || stats.onePageSummary || '';
-    const studyPlan = data.studyPlan || stats.studyPlan || [];
+    const flashcards = Array.isArray(data.flashcards) ? data.flashcards : [];
+    const quizzes = Array.isArray(data.quizzes) ? data.quizzes : [];
+    const stats = data.summary_stats || {};
+    const summaryText = stats.onePageSummary ?? '';
+    const studyPlan = Array.isArray(stats.studyPlan) ? stats.studyPlan : [];
 
     if (flashcards.length === 0) {
       throw new Error('AI không tạo được flashcard nào từ nội dung PDF này.');
     }
 
     /* ── 1. Render title/file name ── */
-    const displayTitle = data.documentTitle || data.fileName || 'Tài liệu không tên';
+    const displayTitle = data.document_title || data.fileName || 'Tài liệu không tên';
     resultFileName.textContent = `Nội dung: ${displayTitle}`;
 
     /* ── 2. Render Stats Badges ── */
