@@ -5,6 +5,49 @@
 
 const $ = (sel) => document.querySelector(sel);
 
+/* ── Theme Logic ── */
+const THEME_STORAGE_KEY = 'bien-nhanh-theme';
+const themeToggle = $('#themeToggle');
+const themeSun = $('#themeSun');
+const themeMoon = $('#themeMoon');
+const themeLabel = $('#themeLabel');
+const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+
+const setTheme = (theme, persist = false) => {
+  const resolvedTheme = theme === 'dark' ? 'dark' : 'light';
+  document.documentElement.classList.toggle('dark', resolvedTheme === 'dark');
+  document.documentElement.setAttribute('data-theme', resolvedTheme);
+  document.documentElement.style.colorScheme = resolvedTheme;
+
+  themeSun?.classList.toggle('hidden', resolvedTheme === 'dark');
+  themeMoon?.classList.toggle('hidden', resolvedTheme === 'light');
+  if (themeLabel) themeLabel.textContent = resolvedTheme === 'dark' ? 'Dark' : 'Light';
+
+  if (persist) {
+    localStorage.setItem(THEME_STORAGE_KEY, resolvedTheme);
+  }
+};
+
+const getPreferredTheme = () => {
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  if (savedTheme === 'dark' || savedTheme === 'light') return savedTheme;
+  return themeMedia.matches ? 'dark' : 'light';
+};
+
+const initTheme = () => {
+  setTheme(getPreferredTheme());
+
+  themeToggle?.addEventListener('click', () => {
+    const nextTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+    setTheme(nextTheme, true);
+  });
+
+  themeMedia.addEventListener('change', (event) => {
+    if (localStorage.getItem(THEME_STORAGE_KEY)) return;
+    setTheme(event.matches ? 'dark' : 'light');
+  });
+};
+
 /* ── DOM refs ── */
 const dropZone          = $('#dropZone');
 const fileInput         = $('#fileInput');
@@ -30,6 +73,8 @@ const flashcardsContainer = $('#flashcardsContainer');
 const quizContainer       = $('#quizContainer');
 const quizCount           = $('#quizCount');
 const quizList            = $('#quizList');
+
+initTheme();
 
 /* ══════════════════
    Tabs Logic
@@ -124,17 +169,44 @@ const STAT_CONFIG = [
   },
 ];
 
-const renderStatBadge = (config, value) => `
-  <div class="stat-badge relative overflow-hidden bg-${config.colorClass}-500/[0.07] border border-${config.colorClass}-500/15 rounded-xl px-4 py-3 flex items-center gap-3 hover:bg-${config.colorClass}-500/[0.12] transition-colors duration-300">
-    <div class="w-8 h-8 rounded-lg bg-${config.colorClass}-500/15 flex items-center justify-center text-${config.colorClass}-400 shrink-0">
+const STAT_CLASS_MAP = {
+  brand: {
+    wrapper: 'bg-brand-500/10 border-brand-500/20 hover:bg-brand-500/15',
+    icon: 'bg-brand-500/15 text-brand-400',
+    value: 'text-brand-300',
+  },
+  emerald: {
+    wrapper: 'bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/15',
+    icon: 'bg-emerald-500/15 text-emerald-400',
+    value: 'text-emerald-300',
+  },
+  amber: {
+    wrapper: 'bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/15',
+    icon: 'bg-amber-500/15 text-amber-400',
+    value: 'text-amber-300',
+  },
+  purple: {
+    wrapper: 'bg-purple-500/10 border-purple-500/20 hover:bg-purple-500/15',
+    icon: 'bg-purple-500/15 text-purple-400',
+    value: 'text-purple-300',
+  },
+};
+
+const renderStatBadge = (config, value) => {
+  const classes = STAT_CLASS_MAP[config.colorClass];
+
+  return `
+  <div class="stat-badge relative overflow-hidden ${classes.wrapper} rounded-xl px-4 py-3 flex items-center gap-3 transition-colors duration-300">
+    <div class="w-8 h-8 rounded-lg ${classes.icon} flex items-center justify-center shrink-0">
       ${config.icon}
     </div>
     <div class="min-w-0">
       <p class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">${config.label}</p>
-      <p class="text-sm font-bold text-${config.colorClass}-300 mt-0.5 truncate">${value}</p>
+      <p class="text-sm font-bold ${classes.value} mt-0.5 truncate">${value}</p>
     </div>
   </div>
 `;
+};
 
 /* ══════════════════
    Flashcard Renderer
@@ -190,12 +262,20 @@ const renderFlashcard = (card, index) => {
    Quiz Renderer
    ══════════════════ */
 
+const QUIZ_CLASS_MAP = {
+  card: 'bg-white/80 border-slate-200 text-slate-900 shadow-sm hover:border-emerald-400/40 dark:bg-white/5 dark:border-white/10 dark:text-slate-100 dark:shadow-lg dark:shadow-black/20',
+  explanation: 'bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800/50 dark:border-slate-700/50 dark:text-slate-300',
+  option: 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-emerald-400/50 dark:bg-white/5 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:border-emerald-500/50',
+  correct: 'bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-300',
+  wrong: 'bg-red-500/20 border-red-500/50 text-red-700 dark:text-red-300',
+};
+
 const renderQuiz = (quiz, index) => {
   const card = document.createElement('div');
-  card.className = 'bg-white/5 border border-white/10 rounded-2xl p-6 transition-all duration-300 hover:border-emerald-500/30 shadow-lg shadow-black/20';
+  card.className = `rounded-2xl p-6 transition-all duration-300 ${QUIZ_CLASS_MAP.card}`;
 
   const questionHeader = document.createElement('h4');
-  questionHeader.className = 'text-lg font-semibold text-slate-100 mb-5 leading-relaxed';
+  questionHeader.className = 'text-lg font-semibold mb-5 leading-relaxed text-slate-900 dark:text-slate-100';
   questionHeader.innerHTML = `<span class="text-emerald-400 font-bold mr-2">Câu ${index + 1}:</span> ${quiz.question}`;
   card.appendChild(questionHeader);
 
@@ -205,12 +285,12 @@ const renderQuiz = (quiz, index) => {
   let hasAnswered = false;
 
   const explElement = document.createElement('div');
-  explElement.className = 'hidden mt-4 p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 text-sm text-slate-300 leading-relaxed';
+  explElement.className = `hidden mt-4 p-4 rounded-xl border text-sm leading-relaxed ${QUIZ_CLASS_MAP.explanation}`;
   explElement.innerHTML = `<span class="font-semibold text-white">Giải thích:</span> ${quiz.explanation}`;
 
-  const optionBtns = quiz.options.map((opt, i) => {
+  const optionBtns = quiz.options.map((opt) => {
     const btn = document.createElement('button');
-    btn.className = 'text-left px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:border-emerald-500/50 transition-all duration-200 text-sm font-medium';
+    btn.className = `text-left px-5 py-3 rounded-xl border transition-all duration-200 text-sm font-medium ${QUIZ_CLASS_MAP.option}`;
     btn.textContent = opt;
     // Store original option for comparison
     btn.dataset.original = opt;
@@ -225,18 +305,15 @@ const renderQuiz = (quiz, index) => {
 
       const isCorrect = opt === quiz.correctAnswer;
       
-      // Update all buttons colors
       optionBtns.forEach(b => {
         b.disabled = true;
-        b.classList.remove('hover:bg-white/10', 'hover:border-emerald-500/50');
         b.classList.add('cursor-default', 'opacity-70');
+        b.className = `text-left px-5 py-3 rounded-xl border transition-all duration-500 text-sm font-medium ${QUIZ_CLASS_MAP.option}`;
         
         if (b.dataset.original === quiz.correctAnswer) {
-          // Highlight correct answer green
-          b.className = 'text-left px-5 py-3 rounded-xl border transition-all duration-500 text-sm font-semibold bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]';
+          b.className = `text-left px-5 py-3 rounded-xl border transition-all duration-500 text-sm font-semibold ${QUIZ_CLASS_MAP.correct} shadow-[0_0_15px_rgba(16,185,129,0.15)]`;
         } else if (b === btn && !isCorrect) {
-          // Highlight selected wrong answer red
-          b.className = 'text-left px-5 py-3 rounded-xl border transition-all duration-500 text-sm font-medium bg-red-500/20 border-red-500/50 text-red-300';
+          b.className = `text-left px-5 py-3 rounded-xl border transition-all duration-500 text-sm font-medium ${QUIZ_CLASS_MAP.wrong}`;
         }
       });
     });

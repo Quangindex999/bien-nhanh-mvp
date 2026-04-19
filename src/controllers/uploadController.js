@@ -139,11 +139,16 @@ export const handlePdfUpload = async (req, res, _next) => {
         console.log(`- Request AI lần ${attempt}/${MAX_RETRIES}...`);
         const result = await model.generateContent(buildPrompt(fullText));
         const aiResponse = result.response.text();
-        
-        let jsonStr = aiResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
-        parsedGeminiData = JSON.parse(jsonStr);
+
+        const jsonStr = aiResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
+        try {
+          parsedGeminiData = JSON.parse(jsonStr);
+        } catch (parseErr) {
+          throw new Error(`AI trả về JSON không hợp lệ: ${parseErr.message}`);
+        }
+
         console.log('- Gemini trả về JSON hợp lệ!');
-        break; 
+        break;
       } catch (err) {
         console.warn(`[Lần ${attempt}] Lỗi gọi Gemini hoặc parse JSON:`, err?.message);
         attempt++;

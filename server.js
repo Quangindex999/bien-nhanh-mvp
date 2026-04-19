@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import apiRoutes from './src/routes/apiRoutes.js';
@@ -23,11 +24,23 @@ app.use(express.static(join(__dirname, 'public')));
 app.use('/api', apiRoutes);
 
 /* ── Serve Vite production build ── */
-app.use(express.static(join(__dirname, 'dist')));
+const distPath = join(__dirname, 'dist');
+const distExists = fs.existsSync(distPath);
+
+if (distExists) {
+  app.use(express.static(distPath));
+} else {
+  console.warn('Thư mục dist chưa tồn tại, vui lòng chạy npm run build');
+}
 
 /* ── SPA catch-all: trả về index.html cho mọi route không phải API ── */
 app.get('*', (_req, res) => {
-  res.sendFile(join(__dirname, 'dist', 'index.html'));
+  if (distExists) {
+    res.sendFile(join(distPath, 'index.html'));
+    return;
+  }
+
+  res.status(404).send('Frontend build chưa tồn tại.');
 });
 
 /* ── Global error handler ── */
