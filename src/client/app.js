@@ -67,10 +67,16 @@ const flashcardsGrid    = $('#flashcardsGrid');
 const errorCard         = $('#errorCard');
 const errorMsg          = $('#errorMessage');
 
+const tabSummary          = $('#tabSummary');
 const tabFlashcards       = $('#tabFlashcards');
 const tabQuiz             = $('#tabQuiz');
+const tabStudyPlan        = $('#tabStudyPlan');
+const summaryContainer    = $('#summaryContainer');
+const summaryContent      = $('#summaryContent');
 const flashcardsContainer = $('#flashcardsContainer');
 const quizContainer       = $('#quizContainer');
+const studyPlanContainer  = $('#studyPlanContainer');
+const studyPlanList       = $('#studyPlanList');
 const quizCount           = $('#quizCount');
 const quizList            = $('#quizList');
 
@@ -80,22 +86,29 @@ initTheme();
    Tabs Logic
    ══════════════════ */
 
+const TAB_ACTIVE = 'px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-brand-500 text-white shadow-lg shadow-brand-500/30';
+const TAB_INACTIVE = 'px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10';
+
 const switchTab = (tab) => {
-  if (tab === 'flashcards') {
-    if(tabFlashcards) tabFlashcards.className = "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-brand-500 text-white shadow-lg shadow-brand-500/30";
-    if(tabQuiz) tabQuiz.className = "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10";
-    if(flashcardsContainer) flashcardsContainer.classList.remove('hidden');
-    if(quizContainer) quizContainer.classList.add('hidden');
-  } else {
-    if(tabQuiz) tabQuiz.className = "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-brand-500 text-white shadow-lg shadow-brand-500/30";
-    if(tabFlashcards) tabFlashcards.className = "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10";
-    if(quizContainer) quizContainer.classList.remove('hidden');
-    if(flashcardsContainer) flashcardsContainer.classList.add('hidden');
-  }
+  const tabMap = {
+    summary: { btn: tabSummary, panel: summaryContainer },
+    flashcards: { btn: tabFlashcards, panel: flashcardsContainer },
+    quiz: { btn: tabQuiz, panel: quizContainer },
+    studyPlan: { btn: tabStudyPlan, panel: studyPlanContainer },
+  };
+
+  Object.entries(tabMap).forEach(([key, item]) => {
+    if (!item.btn || !item.panel) return;
+    const active = key === tab;
+    item.btn.className = active ? TAB_ACTIVE : TAB_INACTIVE;
+    item.panel.classList.toggle('hidden', !active);
+  });
 };
 
+tabSummary?.addEventListener('click', () => switchTab('summary'));
 tabFlashcards?.addEventListener('click', () => switchTab('flashcards'));
 tabQuiz?.addEventListener('click', () => switchTab('quiz'));
+tabStudyPlan?.addEventListener('click', () => switchTab('studyPlan'));
 
 let selectedFile = null;
 
@@ -208,6 +221,28 @@ const renderStatBadge = (config, value) => {
 `;
 };
 
+const escapeHtml = (value = '') => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+const formatSummaryMarkdown = (text = '') => {
+  const lines = String(text).split(/\r?\n/);
+  const html = lines.map((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return '<div class="h-3"></div>';
+    if (trimmed.startsWith('### ')) return `<h3 class="text-lg font-bold text-slate-900 dark:text-white mt-5 mb-2">${escapeHtml(trimmed.slice(4))}</h3>`;
+    if (trimmed.startsWith('## ')) return `<h2 class="text-xl font-extrabold text-slate-900 dark:text-white mt-6 mb-3">${escapeHtml(trimmed.slice(3))}</h2>`;
+    if (trimmed.startsWith('# ')) return `<h1 class="text-2xl font-extrabold text-slate-900 dark:text-white mt-6 mb-4">${escapeHtml(trimmed.slice(2))}</h1>`;
+    if (trimmed.startsWith('- ')) return `<li class="ml-5 list-disc mb-2 text-slate-700 dark:text-slate-300 leading-relaxed">${escapeHtml(trimmed.slice(2))}</li>`;
+    const bolded = escapeHtml(trimmed).replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-white">$1</strong>');
+    return `<p class="mb-3 text-slate-700 dark:text-slate-300 leading-relaxed">${bolded}</p>`;
+  }).join('');
+  return `<div class="space-y-1">${html}</div>`;
+};
+
 /* ══════════════════
    Flashcard Renderer
    ══════════════════ */
@@ -268,6 +303,43 @@ const QUIZ_CLASS_MAP = {
   option: 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-emerald-400/50 dark:bg-white/5 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:border-emerald-500/50',
   correct: 'bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-300',
   wrong: 'bg-red-500/20 border-red-500/50 text-red-700 dark:text-red-300',
+};
+
+const renderSummary = (summaryText) => {
+  if (!summaryContent) return;
+  summaryContent.innerHTML = `
+    <div class="summary-content text-[15px] leading-7 text-slate-700 dark:text-slate-300">
+      ${summaryText ? formatSummaryMarkdown(summaryText) : '<p class="text-slate-500 dark:text-slate-400">Chưa có nội dung tóm tắt.</p>'}
+    </div>
+  `;
+};
+
+const renderStudyPlan = (studyPlan = []) => {
+  if (!studyPlanList) return;
+  if (!Array.isArray(studyPlan) || studyPlan.length === 0) {
+    studyPlanList.innerHTML = '<p class="text-slate-500 dark:text-slate-400">Chưa có kế hoạch ôn thi.</p>';
+    return;
+  }
+
+  studyPlanList.innerHTML = `
+    <div class="relative pl-6">
+      <div class="absolute left-2 top-0 bottom-0 w-px bg-linear-to-b from-purple-500/60 via-brand-500/30 to-transparent"></div>
+      ${studyPlan.map((day) => `
+        <div class="relative mb-5 last:mb-0">
+          <div class="absolute left-[-1.9rem] top-4 w-4 h-4 rounded-full bg-purple-400 ring-4 ring-purple-500/10"></div>
+          <div class="glass-panel rounded-2xl p-5 border border-white/10 bg-white/5 dark:bg-white/5 backdrop-blur-xl">
+            <div class="flex flex-wrap items-center gap-3 mb-3">
+              <span class="px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 text-xs font-semibold">Ngày ${escapeHtml(day.day)}</span>
+              <h4 class="font-bold text-slate-900 dark:text-white">${escapeHtml(day.title ?? `Ngày ${day.day}`)}</h4>
+            </div>
+            <ul class="space-y-2">
+              ${(day.tasks ?? []).map((task) => `<li class="flex gap-3 text-slate-700 dark:text-slate-300"><span class="mt-2 w-2 h-2 rounded-full bg-brand-400 shrink-0"></span><span>${escapeHtml(task)}</span></li>`).join('')}
+            </ul>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
 };
 
 const renderQuiz = (quiz, index) => {
@@ -403,7 +475,10 @@ uploadBtn.addEventListener('click', async () => {
     }
 
     const flashcards = data.flashcards || [];
+    const quizzes = data.quizzes || [];
     const stats = data.summaryStats || {};
+    const summaryText = data.onePageSummary || stats.onePageSummary || '';
+    const studyPlan = data.studyPlan || stats.studyPlan || [];
 
     if (flashcards.length === 0) {
       throw new Error('AI không tạo được flashcard nào từ nội dung PDF này.');
@@ -425,6 +500,9 @@ uploadBtn.addEventListener('click', async () => {
       .map(cfg => renderStatBadge(cfg, statsValues[cfg.key]))
       .join('');
 
+    renderSummary(summaryText);
+    renderStudyPlan(studyPlan);
+
     /* ── 3. Render Flashcards ── */
     cardCount.textContent = flashcards.length;
     flashcardsGrid.innerHTML = '';
@@ -435,15 +513,14 @@ uploadBtn.addEventListener('click', async () => {
     });
 
     /* ── 3.1. Render Quizzes ── */
-    const quizzes = data.quizzes || [];
     quizCount.textContent = quizzes.length;
     quizList.innerHTML = '';
     quizzes.forEach((quiz, index) => {
       quizList.appendChild(renderQuiz(quiz, index));
     });
     
-    // Reset tabs to default (flashcards)
-    switchTab('flashcards');
+    // Reset tabs to default (summary)
+    switchTab('summary');
 
     /* ── 4. Show result ── */
     resultSection.classList.remove('hidden');

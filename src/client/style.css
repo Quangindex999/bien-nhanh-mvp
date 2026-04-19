@@ -256,6 +256,38 @@ body {
 }
 
 /* ═══════════════════════════════════
+   Summary / Study Plan panels
+   ═══════════════════════════════════ */
+.glass-panel {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.42));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 20px 45px -24px rgba(15, 23, 42, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(18px);
+}
+:root.dark .glass-panel {
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.82), rgba(15, 23, 42, 0.55));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 50px -30px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.summary-content strong {
+  color: inherit;
+}
+.summary-content ul {
+  margin: 0.5rem 0 1rem;
+  padding-left: 1.25rem;
+}
+.summary-content li {
+  margin-bottom: 0.4rem;
+}
+.prose-panel h1,
+.prose-panel h2,
+.prose-panel h3,
+.prose-panel p,
+.prose-panel li {
+  word-break: break-word;
+}
+
+/* ═══════════════════════════════════
    Stat Badges hover shimmer
    ═══════════════════════════════════ */
 .stat-badge::after {
@@ -366,5 +398,8 @@ main {
   }
   .card-answer {
     font-size: 0.75rem;
+  }
+  .glass-panel {
+    border-radius: 1rem;
   }
 }

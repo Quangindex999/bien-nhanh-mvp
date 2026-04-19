@@ -9,7 +9,7 @@ const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
 /* ── System prompt: ép AI trả JSON thuần, không markdown ── */
 const buildPrompt = (text) => `
-Bạn là một chuyên gia giáo dục hàng đầu. Nhiệm vụ của bạn là phân tích nội dung tài liệu học tập dưới đây và tạo ra một bộ Flashcards và Câu hỏi Trắc nghiệm chất lượng cao giúp người học ghi nhớ hiệu quả.
+Bạn là một chuyên gia giáo dục hàng đầu. Nhiệm vụ của bạn là phân tích nội dung tài liệu học tập dưới đây và tạo ra một bộ Flashcards, Câu hỏi Trắc nghiệm, Tóm tắt 1 trang và Kế hoạch ôn thi chất lượng cao giúp người học ghi nhớ hiệu quả.
 
 YÊU CẦU BẮT BUỘC:
 1. Trả về DUY NHẤT một JSON object hợp lệ, KHÔNG có markdown, KHÔNG có \`\`\`json, KHÔNG có bất kỳ text nào bên ngoài JSON.
@@ -21,6 +21,14 @@ YÊU CẦU BẮT BUỘC:
     "difficultyScore": <điểm độ khó từ 1 đến 10>,
     "timeSaved": "<thời gian tiết kiệm so với đọc toàn bộ tài liệu>"
   },
+  "onePageSummary": "<Một đoạn tóm tắt 1 trang, có thể dùng markdown cơ bản như in đậm và gạch đầu dòng. Tập trung vào ý cốt lõi nhất của tài liệu>",
+  "studyPlan": [
+    {
+      "day": 1,
+      "title": "<Tên chủ đề/ngày ôn tập>",
+      "tasks": ["<Việc 1>", "<Việc 2>"]
+    }
+  ],
   "flashcards": [
     {
       "id": 1,
@@ -43,7 +51,10 @@ YÊU CẦU BẮT BUỘC:
 5. Mỗi flashcard phải có "front" là câu hỏi và "back" là câu trả lời.
 6. Tạo từ 5 đến 10 câu trắc nghiệm (quizzes) chất lượng.
 7. Options trong quizzes phải gồm 4 lựa chọn, correctAnswer phải khớp HOÀN TOÀN với 1 trong 4 lựa chọn đó.
-8. Viết bằng cùng ngôn ngữ với nội dung tài liệu.
+8. Tạo onePageSummary súc tích, dễ đọc, có thể dùng markdown cơ bản.
+9. Tạo studyPlan gồm từ 3 đến 7 ngày, số ngày phụ thuộc vào độ dài và độ phức tạp của tài liệu.
+10. Mỗi phần trong studyPlan phải có day, title và tasks (mảng nhiệm vụ ngắn gọn, thực tế).
+11. Viết bằng cùng ngôn ngữ với nội dung tài liệu.
 
 NỘI DUNG TÀI LIỆU:
 ---
@@ -90,6 +101,7 @@ export const handlePdfUpload = async (req, res, _next) => {
         
         // Đảm bảo sử dụng documentTitle để tránh lỗi font
         const displayTitle = cachedData.documentTitle || cachedData.file_name || safeFileName;
+        const cachedSummaryStats = cachedData.summaryStats ?? {};
         
         return res.status(200).json({
           success: true,
@@ -99,7 +111,9 @@ export const handlePdfUpload = async (req, res, _next) => {
             documentTitle: displayTitle,
             totalPages: cachedData.summaryStats?.totalPages || 0,
             totalChars: 0,
-            summaryStats: cachedData.summaryStats,
+            summaryStats: cachedSummaryStats,
+            onePageSummary: cachedSummaryStats.onePageSummary ?? '',
+            studyPlan: Array.isArray(cachedSummaryStats.studyPlan) ? cachedSummaryStats.studyPlan : [],
             flashcards: cachedData.flashcards,
             quizzes: cachedData.quizzes
           }
@@ -159,6 +173,11 @@ export const handlePdfUpload = async (req, res, _next) => {
     }
 
     const finalDocumentTitle = parsedGeminiData.documentTitle || safeFileName;
+    const finalSummaryStats = {
+      ...(parsedGeminiData.summaryStats ?? {}),
+      onePageSummary: parsedGeminiData.onePageSummary ?? '',
+      studyPlan: Array.isArray(parsedGeminiData.studyPlan) ? parsedGeminiData.studyPlan : [],
+    };
 
     /* ── 3. Lưu lại thành quả (Save to Supabase) ── */
     try {
@@ -168,7 +187,7 @@ export const handlePdfUpload = async (req, res, _next) => {
           file_hash: fileHash,
           file_name: safeFileName,
           documentTitle: finalDocumentTitle,
-          summaryStats: parsedGeminiData.summaryStats,
+          summaryStats: finalSummaryStats,
           flashcards: parsedGeminiData.flashcards,
           quizzes: parsedGeminiData.quizzes
         }, { onConflict: 'file_hash' });
@@ -191,7 +210,9 @@ export const handlePdfUpload = async (req, res, _next) => {
         documentTitle: finalDocumentTitle,
         totalPages: pdfData?.numpages || 0,
         totalChars: fullText.length,
-        summaryStats: parsedGeminiData.summaryStats,
+        summaryStats: finalSummaryStats,
+        onePageSummary: parsedGeminiData.onePageSummary ?? '',
+        studyPlan: Array.isArray(parsedGeminiData.studyPlan) ? parsedGeminiData.studyPlan : [],
         flashcards: parsedGeminiData.flashcards,
         quizzes: parsedGeminiData.quizzes
       }
