@@ -23,109 +23,265 @@
   <body
     class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900 font-sans antialiased dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-brand-950 dark:text-white"
   >
-    <!-- ═══ HEADER ═══ -->
-    <header
-      class="relative overflow-hidden border-b border-slate-200/80 dark:border-white/5 bg-white/70 dark:bg-transparent backdrop-blur-xl"
-    >
-      <div
-        class="absolute inset-0 bg-gradient-to-r from-brand-600/10 via-transparent to-brand-400/10 pointer-events-none"
-      ></div>
-      <div
-        class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between relative z-10"
+    <!-- ═══ LANDING CONTAINER ═══ -->
+    <div id="landingContainer" class="min-h-screen flex flex-col">
+      <header
+        class="relative overflow-hidden border-b border-slate-200/80 dark:border-white/5 bg-white/70 dark:bg-transparent backdrop-blur-xl"
       >
-        <div class="flex items-center gap-3">
-          <div
-            class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/30"
-          >
-            <svg
-              class="w-5 h-5 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2.5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"
-              />
-            </svg>
-          </div>
-          <h1
-            class="text-xl font-bold tracking-tight text-slate-900 dark:text-white"
-          >
-            Biến Nhanh
-          </h1>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <button
-            id="themeToggle"
-            type="button"
-            class="theme-toggle inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-all duration-300 hover:bg-slate-50 hover:border-brand-500/30 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-            aria-label="Toggle dark and light mode"
-          >
-            <svg
-              id="themeSun"
-              class="w-4 h-4 text-amber-400 hidden dark:text-amber-300"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 3v1.5m0 15V21m8.485-8.485H21M3 12H4.5m12.02-6.02l1.06-1.06M5.42 18.58l1.06-1.06m0-12.02-1.06-1.06m12.02 12.02 1.06 1.06M12 6.75A5.25 5.25 0 1012 17.25 5.25 5.25 0 0012 6.75z"
-              />
-            </svg>
-            <svg
-              id="themeMoon"
-              class="w-4 h-4 text-slate-700 dark:text-slate-200"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M21 12.79A9 9 0 1111.21 3 7.5 7.5 0 0021 12.79z"
-              />
-            </svg>
-            <span id="themeLabel">Light</span>
-          </button>
-          <span
-            class="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-3 py-1.5 rounded-full border border-slate-200 dark:border-white/5"
-            >v1.0 · Beta</span
-          >
-        </div>
-      </div>
-    </header>
-
-    <!-- ═══ MAIN ═══ -->
-    <main class="max-w-5xl mx-auto px-6 py-14">
-      <!-- Hero text -->
-      <div class="text-center mb-12 animate-fade-in">
-        <h2
-          class="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 dark:from-white dark:via-brand-200 dark:to-brand-400 bg-clip-text text-transparent leading-tight"
-        >
-          Upload PDF,<br />nhận Flashcards ngay
-        </h2>
-        <p
-          class="mt-4 text-gray-700 dark:text-slate-400 max-w-lg mx-auto text-sm leading-relaxed"
-        >
-          Kéo thả hoặc chọn file PDF — AI sẽ phân tích nội dung và tạo bộ
-          Flashcards giúp bạn ôn tập hiệu quả.
-        </p>
-      </div>
-
-      <!-- ═══ UPLOAD ZONE ═══ -->
-      <div class="max-w-xl mx-auto">
         <div
-          id="dropZone"
-          class="group relative border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-2xl p-12 text-center cursor-pointer transition-all duration-300 bg-gray-50 hover:bg-blue-50 dark:border-white/10 dark:hover:border-brand-500/50 dark:bg-white/[0.02] dark:hover:bg-brand-500/[0.04]"
+          class="absolute inset-0 bg-gradient-to-r from-brand-600/10 via-transparent to-brand-400/10 pointer-events-none"
+        ></div>
+        <div
+          class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between relative z-10"
         >
+          <div class="flex items-center gap-3">
+            <div
+              class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/30"
+            >
+              <svg
+                class="w-5 h-5 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"
+                />
+              </svg>
+            </div>
+            <h1
+              class="text-xl font-bold tracking-tight text-slate-900 dark:text-white"
+            >
+              Biến Nhanh Study
+            </h1>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button
+              id="themeToggle"
+              type="button"
+              class="theme-toggle inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-all duration-300 hover:bg-slate-50 hover:border-brand-500/30 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+              aria-label="Toggle dark and light mode"
+            >
+              <svg
+                id="themeSun"
+                class="w-4 h-4 text-amber-400 hidden dark:text-amber-300"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 3v1.5m0 15V21m8.485-8.485H21M3 12H4.5m12.02-6.02l1.06-1.06M5.42 18.58l1.06-1.06m0-12.02-1.06-1.06m12.02 12.02 1.06 1.06M12 6.75A5.25 5.25 0 1012 17.25 5.25 5.25 0 0012 6.75z"
+                />
+              </svg>
+              <svg
+                id="themeMoon"
+                class="w-4 h-4 text-slate-700 dark:text-slate-200"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M21 12.79A9 9 0 1111.21 3 7.5 7.5 0 0021 12.79z"
+                />
+              </svg>
+              <span id="themeLabel">Light</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="flex-1">
+        <section class="max-w-7xl mx-auto px-6 py-16 md:py-20">
+          <div class="grid lg:grid-cols-2 gap-12 items-center">
+            <div class="space-y-8 animate-fade-in">
+              <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-brand-500/15 bg-brand-500/10 text-brand-700 dark:text-brand-300 text-xs font-semibold">
+                AI học tập · Flashcards · Quiz · Ôn thi
+              </div>
+              <div class="space-y-5">
+                <h2 class="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 dark:from-white dark:via-brand-200 dark:to-brand-400 bg-clip-text text-transparent">
+                  Biến PDF, slide thành bộ ôn thi tiếng Việt trong vài phút
+                </h2>
+                <p class="text-lg sm:text-xl text-slate-700 dark:text-slate-300 leading-relaxed max-w-2xl">
+                  Tóm tắt bài học, tạo flashcards, sinh quiz và lập kế hoạch ôn thi — Hoàn toàn tự động, không cần viết prompt.
+                </p>
+              </div>
+              <div class="flex flex-wrap items-center gap-4">
+                <button
+                  id="startAppBtn"
+                  type="button"
+                  class="px-7 py-4 rounded-2xl text-base font-bold text-white bg-gradient-to-r from-brand-600 via-indigo-600 to-violet-600 shadow-xl shadow-brand-500/25 hover:shadow-brand-500/40 hover:scale-[1.02] transition-all duration-300"
+                >
+                  Dùng thử miễn phí
+                </button>
+                <p class="text-sm text-slate-500 dark:text-slate-400">
+                  Không cần cài đặt · Tối ưu cho mùa thi
+                </p>
+              </div>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div class="glass-panel rounded-2xl p-5 border border-white/10">
+                <div class="w-11 h-11 rounded-xl bg-brand-500/15 text-brand-500 flex items-center justify-center mb-4">
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6M8 6h8M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 class="font-bold text-slate-900 dark:text-white mb-2">Ghi chú 1 trang</h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">Chắt lọc ý chính của tài liệu thành bản tóm tắt rõ ràng, dễ học.</p>
+              </div>
+              <div class="glass-panel rounded-2xl p-5 border border-white/10">
+                <div class="w-11 h-11 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center mb-4">
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.75 6.75A2.25 2.25 0 017 4.5h10A2.25 2.25 0 0119.25 6.75v10.5A2.25 2.25 0 0117 19.5H7a2.25 2.25 0 01-2.25-2.25V6.75zM7.5 8.25h9M7.5 11.25h9M7.5 14.25h5" />
+                  </svg>
+                </div>
+                <h3 class="font-bold text-slate-900 dark:text-white mb-2">Flashcards thông minh</h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">Tạo thẻ hỏi đáp ngắn gọn giúp ghi nhớ nhanh các khái niệm cốt lõi.</p>
+              </div>
+              <div class="glass-panel rounded-2xl p-5 border border-white/10">
+                <div class="w-11 h-11 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center mb-4">
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75A6.75 6.75 0 1012 5.25a6.75 6.75 0 000 13.5z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v3.75l2.25 1.5" />
+                  </svg>
+                </div>
+                <h3 class="font-bold text-slate-900 dark:text-white mb-2">Quiz trắc nghiệm</h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">Sinh câu hỏi luyện tập với đáp án và giải thích rõ ràng, dễ ôn.</p>
+              </div>
+              <div class="glass-panel rounded-2xl p-5 border border-white/10">
+                <div class="w-11 h-11 rounded-xl bg-purple-500/15 text-purple-500 flex items-center justify-center mb-4">
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 class="font-bold text-slate-900 dark:text-white mb-2">Kế hoạch ôn thi</h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">Chia lộ trình học theo ngày để bám sát tiến độ và không bị quá tải.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="border-t border-slate-200/70 dark:border-white/5 py-5 text-center text-sm text-slate-500 dark:text-slate-400">
+        Dành riêng cho sinh viên mùa thi
+      </footer>
+    </div>
+
+    <!-- ═══ APP CONTAINER ═══ -->
+    <div id="appContainer" class="hidden min-h-screen flex flex-col">
+      <!-- ═══ HEADER ═══ -->
+      <header
+        class="relative overflow-hidden border-b border-slate-200/80 dark:border-white/5 bg-white/70 dark:bg-transparent backdrop-blur-xl"
+      >
+        <div
+          class="absolute inset-0 bg-gradient-to-r from-brand-600/10 via-transparent to-brand-400/10 pointer-events-none"
+        ></div>
+        <div
+          class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between relative z-10"
+        >
+          <div class="flex items-center gap-3">
+            <div
+              class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/30"
+            >
+              <svg
+                class="w-5 h-5 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"
+                />
+              </svg>
+            </div>
+            <h1
+              class="text-xl font-bold tracking-tight text-slate-900 dark:text-white"
+            >
+              Biến Nhanh
+            </h1>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button
+              id="themeToggle"
+              type="button"
+              class="theme-toggle inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-all duration-300 hover:bg-slate-50 hover:border-brand-500/30 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+              aria-label="Toggle dark and light mode"
+            >
+              <svg
+                id="themeSun"
+                class="w-4 h-4 text-amber-400 hidden dark:text-amber-300"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 3v1.5m0 15V21m8.485-8.485H21M3 12H4.5m12.02-6.02l1.06-1.06M5.42 18.58l1.06-1.06m0-12.02-1.06-1.06m12.02 12.02 1.06 1.06M12 6.75A5.25 5.25 0 1012 17.25 5.25 5.25 0 0012 6.75z"
+                />
+              </svg>
+              <svg
+                id="themeMoon"
+                class="w-4 h-4 text-slate-700 dark:text-slate-200"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M21 12.79A9 9 0 1111.21 3 7.5 7.5 0 0021 12.79z"
+                />
+              </svg>
+              <span id="themeLabel">Light</span>
+            </button>
+            <span
+              class="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-3 py-1.5 rounded-full border border-slate-200 dark:border-white/5"
+              >v1.0 · Beta</span
+            >
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══ MAIN ═══ -->
+      <main class="max-w-5xl mx-auto px-6 py-14">
+        <!-- Hero text -->
+        <div class="text-center mb-12 animate-fade-in">
+          <h2
+            class="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 dark:from-white dark:via-brand-200 dark:to-brand-400 bg-clip-text text-transparent leading-tight"
+          >
+            Upload PDF,<br />nhận Flashcards ngay
+          </h2>
+          <p
+            class="mt-4 text-gray-700 dark:text-slate-400 max-w-lg mx-auto text-sm leading-relaxed"
+          >
+            Kéo thả hoặc chọn file PDF — AI sẽ phân tích nội dung và tạo bộ
+            Flashcards giúp bạn ôn tập hiệu quả.
+          </p>
+        </div>
+
+        <!-- ═══ UPLOAD ZONE ═══ -->
+        <div class="max-w-xl mx-auto">
+          <div
+            id="dropZone"
+            class="group relative border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-2xl p-12 text-center cursor-pointer transition-all duration-300 bg-gray-50 hover:bg-blue-50 dark:border-white/10 dark:hover:border-brand-500/50 dark:bg-white/[0.02] dark:hover:bg-brand-500/[0.04]"
+          >
           <!-- Glow effect -->
           <div
             class="absolute inset-0 rounded-2xl bg-brand-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"

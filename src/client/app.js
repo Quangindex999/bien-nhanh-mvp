@@ -77,11 +77,22 @@ const flashcardsContainer = $('#flashcardsContainer');
 const quizContainer       = $('#quizContainer');
 const studyPlanContainer  = $('#studyPlanContainer');
 const studyPlanList       = $('#studyPlanList');
-const tabPanels           = $('#tabPanels');
 const quizCount           = $('#quizCount');
 const quizList            = $('#quizList');
+const landingContainer    = $('#landingContainer');
+const appContainer        = $('#appContainer');
+const startAppBtn         = $('#startAppBtn');
 
 initTheme();
+
+const startApp = () => {
+  landingContainer?.classList.add('hidden');
+  appContainer?.classList.remove('hidden');
+  appContainer?.classList.add('animate-fade-in');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+startAppBtn?.addEventListener('click', startApp);
 
 /* ══════════════════
    Tabs Logic
