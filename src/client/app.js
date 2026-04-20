@@ -7,7 +7,7 @@ const $ = (sel) => document.querySelector(sel);
 
 /* ── Theme Logic ── */
 const THEME_STORAGE_KEY = 'bien-nhanh-theme';
-const themeToggle = $('#themeToggle');
+const themeButtons = document.querySelectorAll('.theme-toggle-btn');
 const themeSun = $('#themeSun');
 const themeMoon = $('#themeMoon');
 const themeLabel = $('#themeLabel');
@@ -37,9 +37,11 @@ const getPreferredTheme = () => {
 const initTheme = () => {
   setTheme(getPreferredTheme());
 
-  themeToggle?.addEventListener('click', () => {
-    const nextTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-    setTheme(nextTheme, true);
+  themeButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const nextTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+      setTheme(nextTheme, true);
+    });
   });
 
   themeMedia.addEventListener('change', (event) => {
