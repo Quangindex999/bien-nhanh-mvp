@@ -1,4 +1,5 @@
 import pdfParse from 'pdf-parse-fork';
+import mammoth from 'mammoth';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import crypto from 'crypto';
 import { supabase } from '../config/supabase.js';
@@ -123,22 +124,38 @@ export const handlePdfUpload = async (req, res, _next) => {
       console.warn('- Lỗi khi check cache Supabase:', dbErr.message);
     }
 
-    /* ── 1. Parse PDF buffer ── */
-    console.log('- Đang bắt đầu parse PDF...');
+    /* ── 1. Parse file buffer ── */
     let pdfData = null;
     let fullText = '';
+    const isPdfFile = file.mimetype === 'application/pdf' || file.originalname?.toLowerCase().endsWith('.pdf');
+    const isDocxFile = file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.originalname?.toLowerCase().endsWith('.docx');
+
     try {
-      pdfData = await pdfParse(file.buffer);
-      fullText = pdfData?.text?.trim() ?? '';
+      if (isPdfFile) {
+        console.log('- Đang bắt đầu parse PDF...');
+        pdfData = await pdfParse(file.buffer);
+        fullText = pdfData?.text?.trim() ?? '';
+      } else if (isDocxFile) {
+        console.log('- Đang bắt đầu parse DOCX...');
+        const docxResult = await mammoth.extractRawText({ buffer: file.buffer });
+        fullText = docxResult?.value?.trim() ?? '';
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'Định dạng file không được hỗ trợ. Chỉ chấp nhận PDF hoặc Word (.docx).',
+        });
+      }
     } catch (parseErr) {
-      console.warn('[uploadController] pdf-parse gặp lỗi, tiếp tục với mock data:', parseErr?.message);
+      console.warn('[uploadController] Lỗi khi parse file:', parseErr?.message);
     }
     console.log('- Nội dung text lấy được (10 ký tự đầu):', fullText.substring(0, 10));
 
     if (!fullText) {
       return res.status(422).json({
         success: false,
-        message: 'Không đọc được nội dung chữ từ file PDF này để gửi cho AI (có thể file chỉ chứa hình ảnh).',
+        message: isDocxFile
+          ? 'Không đọc được nội dung chữ từ file Word này để gửi cho AI.'
+          : 'Không đọc được nội dung chữ từ file PDF này để gửi cho AI (có thể file chỉ chứa hình ảnh).',
       });
     }
 

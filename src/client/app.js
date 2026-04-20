@@ -440,11 +440,14 @@ const renderQuiz = (quiz, index) => {
 
 dropZone.addEventListener('drop', (e) => {
   const file = e.dataTransfer?.files?.[0];
-  if (file?.type === 'application/pdf') {
+  const isPdf = file?.type === 'application/pdf' || file?.name?.toLowerCase().endsWith('.pdf');
+  const isDocx = file?.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file?.name?.toLowerCase().endsWith('.docx');
+
+  if (isPdf || isDocx) {
     showFile(file);
   } else {
     clearSelection();
-    errorMsg.textContent = 'Chỉ hỗ trợ file PDF. Vui lòng thử lại.';
+    errorMsg.textContent = 'Chỉ hỗ trợ file PDF hoặc Word. Vui lòng thử lại.';
     errorCard.classList.remove('hidden');
   }
 });
@@ -457,7 +460,18 @@ dropZone.addEventListener('click', () => fileInput.click());
 
 fileInput.addEventListener('change', () => {
   const file = fileInput.files?.[0];
-  if (file) showFile(file);
+  if (!file) return;
+
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  const isDocx = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.toLowerCase().endsWith('.docx');
+
+  if (isPdf || isDocx) {
+    showFile(file);
+  } else {
+    clearSelection();
+    errorMsg.textContent = 'Chỉ hỗ trợ file PDF hoặc Word. Vui lòng thử lại.';
+    errorCard.classList.remove('hidden');
+  }
 });
 
 clearFile.addEventListener('click', (e) => {
