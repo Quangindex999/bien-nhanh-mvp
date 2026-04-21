@@ -6,47 +6,53 @@
 const $ = (sel) => document.querySelector(sel);
 
 /* ── Theme Logic ── */
-const THEME_STORAGE_KEY = 'bien-nhanh-theme';
+const THEME_STORAGE_KEY = 'theme';
+const THEME_MODE_KEY = 'theme-mode';
 const themeButtons = document.querySelectorAll('.theme-toggle-btn');
-const themeSun = $('#themeSun');
-const themeMoon = $('#themeMoon');
-const themeLabel = $('#themeLabel');
 const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
 
-const setTheme = (theme, persist = false) => {
-  const resolvedTheme = theme === 'dark' ? 'dark' : 'light';
+const getSystemTheme = () => (themeMedia.matches ? 'dark' : 'light');
+
+const getStoredThemeMode = () => localStorage.getItem(THEME_MODE_KEY) || 'system';
+
+const applyTheme = (mode, persist = true) => {
+  const activeMode = ['light', 'dark', 'system'].includes(mode) ? mode : 'system';
+  const resolvedTheme = activeMode === 'system' ? getSystemTheme() : activeMode;
   document.documentElement.classList.toggle('dark', resolvedTheme === 'dark');
   document.documentElement.setAttribute('data-theme', resolvedTheme);
   document.documentElement.style.colorScheme = resolvedTheme;
 
-  themeSun?.classList.toggle('hidden', resolvedTheme === 'dark');
-  themeMoon?.classList.toggle('hidden', resolvedTheme === 'light');
-  if (themeLabel) themeLabel.textContent = resolvedTheme === 'dark' ? 'Dark' : 'Light';
-
   if (persist) {
+    localStorage.setItem(THEME_MODE_KEY, activeMode);
     localStorage.setItem(THEME_STORAGE_KEY, resolvedTheme);
   }
-};
 
-const getPreferredTheme = () => {
-  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-  if (savedTheme === 'dark' || savedTheme === 'light') return savedTheme;
-  return themeMedia.matches ? 'dark' : 'light';
+  themeButtons.forEach((btn) => {
+    const isActive = btn.dataset.themeValue === activeMode;
+    const icon = btn.querySelector('svg');
+    const label = btn.querySelector('span');
+
+    btn.className = isActive
+      ? 'theme-toggle-btn cursor-pointer inline-flex items-center gap-2 rounded-full px-2 sm:px-3 py-2 text-xs font-semibold transition-all duration-300 whitespace-nowrap bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 shadow-sm'
+      : 'theme-toggle-btn cursor-pointer inline-flex items-center gap-2 rounded-full px-2 sm:px-3 py-2 text-xs font-semibold transition-all duration-300 whitespace-nowrap text-gray-600 dark:text-gray-400 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white';
+
+    icon?.classList.toggle('text-current', true);
+    label?.classList.toggle('hidden', window.innerWidth < 640);
+  });
 };
 
 const initTheme = () => {
-  setTheme(getPreferredTheme());
+  applyTheme(getStoredThemeMode(), false);
 
   themeButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
-      const nextTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-      setTheme(nextTheme, true);
+      applyTheme(btn.dataset.themeValue || 'system');
     });
   });
 
-  themeMedia.addEventListener('change', (event) => {
-    if (localStorage.getItem(THEME_STORAGE_KEY)) return;
-    setTheme(event.matches ? 'dark' : 'light');
+  themeMedia.addEventListener('change', () => {
+    if (getStoredThemeMode() !== 'system') return;
+    applyTheme('system', true);
   });
 };
 
@@ -223,13 +229,13 @@ const renderStatBadge = (config, value) => {
   const classes = STAT_CLASS_MAP[config.colorClass];
 
   return `
-  <div class="stat-badge relative overflow-hidden ${classes.wrapper} rounded-xl px-4 py-3 flex items-center gap-3 transition-colors duration-300">
+  <div class="stat-badge relative overflow-hidden ${classes.wrapper} rounded-xl px-4 py-3 flex items-center gap-3 transition-colors duration-300 bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10">
     <div class="w-8 h-8 rounded-lg ${classes.icon} flex items-center justify-center shrink-0">
       ${config.icon}
     </div>
     <div class="min-w-0">
-      <p class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">${config.label}</p>
-      <p class="text-sm font-bold ${classes.value} mt-0.5 truncate">${value}</p>
+      <p class="text-[11px] font-medium text-gray-600 dark:text-slate-400 uppercase tracking-wider">${config.label}</p>
+      <p class="text-sm font-bold ${classes.value} mt-0.5 truncate text-gray-900 dark:text-slate-100">${value}</p>
     </div>
   </div>
 `;
@@ -312,9 +318,9 @@ const renderFlashcard = (card, index) => {
    ══════════════════ */
 
 const QUIZ_CLASS_MAP = {
-  card: 'bg-white/80 border-slate-200 text-slate-900 shadow-sm hover:border-emerald-400/40 dark:bg-white/5 dark:border-white/10 dark:text-slate-100 dark:shadow-lg dark:shadow-black/20',
-  explanation: 'bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800/50 dark:border-slate-700/50 dark:text-slate-300',
-  option: 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-emerald-400/50 dark:bg-white/5 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:border-emerald-500/50',
+  card: 'bg-white border-gray-300 text-gray-900 shadow-sm hover:border-emerald-400/40 dark:bg-white/5 dark:border-white/10 dark:text-slate-100 dark:shadow-lg dark:shadow-black/20',
+  explanation: 'bg-gray-50 border-gray-300 text-gray-800 dark:bg-slate-800/50 dark:border-slate-700/50 dark:text-slate-300',
+  option: 'bg-white border-gray-300 text-gray-800 hover:bg-gray-50 hover:border-emerald-400/50 dark:bg-white/5 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:border-emerald-500/50',
   correct: 'bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-300',
   wrong: 'bg-red-500/20 border-red-500/50 text-red-700 dark:text-red-300',
 };
@@ -323,8 +329,8 @@ const renderSummary = (summaryText) => {
   if (!summaryContent) return;
   const content = typeof summaryText === 'string' ? summaryText.trim() : '';
   summaryContent.innerHTML = `
-    <div class="summary-content text-[15px] leading-7 text-slate-700 dark:text-slate-300">
-      ${content ? formatSummaryMarkdown(content) : '<p class="text-slate-500 dark:text-slate-400">Đang cập nhật</p>'}
+    <div class="summary-content text-[15px] leading-7 text-gray-800 dark:text-slate-300 bg-white dark:bg-transparent">
+      ${content ? formatSummaryMarkdown(content) : '<p class="text-gray-500 dark:text-slate-400">Đang cập nhật</p>'}
     </div>
   `;
 };
@@ -343,19 +349,19 @@ const renderStudyPlan = (studyPlan = []) => {
   }
 
   studyPlanList.innerHTML = `
-    <div class="relative border-l-2 border-purple-500 ml-4">
+    <div class="relative border-l-2 border-purple-300 dark:border-purple-500 ml-4">
       ${safePlan.map((day) => {
         const tasks = Array.isArray(day.tasks) ? day.tasks : [];
         return `
         <div class="relative mb-8 ml-8">
           <div class="absolute w-4 h-4 rounded-full bg-purple-500 -left-[2.35rem] top-1.5 ring-4 ring-purple-500/10 shadow-[0_0_0_1px_rgba(168,85,247,0.2)]"></div>
-          <div class="glass-panel rounded-2xl p-5 sm:p-6 border border-white/10 bg-white/5 dark:bg-white/5 backdrop-blur-xl">
+          <div class="glass-panel rounded-2xl p-5 sm:p-6 border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 backdrop-blur-xl">
             <div class="flex flex-wrap items-center gap-3 mb-3">
-              <span class="px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 text-xs font-semibold">Ngày ${escapeHtml(day.day ?? '—')}</span>
-              <h4 class="font-bold text-slate-900 dark:text-white">${escapeHtml(day.title ?? 'Đang cập nhật')}</h4>
+              <span class="px-3 py-1 rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 text-xs font-semibold">Ngày ${escapeHtml(day.day ?? '—')}</span>
+              <h4 class="font-bold text-gray-900 dark:text-white">${escapeHtml(day.title ?? 'Đang cập nhật')}</h4>
             </div>
             <ul class="space-y-2">
-              ${tasks.length ? tasks.map((task) => `<li class="flex gap-3 text-slate-700 dark:text-slate-300"><span class="mt-2 w-2 h-2 rounded-full bg-brand-400 shrink-0"></span><span>${escapeHtml(task)}</span></li>`).join('') : '<li class="text-slate-500 dark:text-slate-400">Không có dữ liệu</li>'}
+              ${tasks.length ? tasks.map((task) => `<li class="flex gap-3 text-gray-800 dark:text-slate-300"><span class="mt-2 w-2 h-2 rounded-full bg-brand-500 shrink-0"></span><span>${escapeHtml(task)}</span></li>`).join('') : '<li class="text-gray-500 dark:text-slate-400">Không có dữ liệu</li>'}
             </ul>
           </div>
         </div>
@@ -369,7 +375,7 @@ const renderQuiz = (quiz, index) => {
   card.className = `rounded-2xl p-6 transition-all duration-300 ${QUIZ_CLASS_MAP.card}`;
 
   const questionHeader = document.createElement('h4');
-  questionHeader.className = 'text-lg font-semibold mb-5 leading-relaxed text-slate-900 dark:text-slate-100';
+  questionHeader.className = 'text-lg font-semibold mb-5 leading-relaxed text-gray-900 dark:text-slate-100';
   questionHeader.innerHTML = `<span class="text-emerald-400 font-bold mr-2">Câu ${index + 1}:</span> ${quiz.question}`;
   card.appendChild(questionHeader);
 
@@ -380,7 +386,7 @@ const renderQuiz = (quiz, index) => {
 
   const explElement = document.createElement('div');
   explElement.className = `hidden mt-4 p-4 rounded-xl border text-sm leading-relaxed ${QUIZ_CLASS_MAP.explanation}`;
-  explElement.innerHTML = `<span class="font-semibold text-white">Giải thích:</span> ${quiz.explanation}`;
+  explElement.innerHTML = `<span class="font-semibold text-gray-900 dark:text-white">Giải thích:</span> ${quiz.explanation}`;
 
   const optionBtns = quiz.options.map((opt) => {
     const btn = document.createElement('button');
