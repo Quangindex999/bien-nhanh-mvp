@@ -5,11 +5,25 @@
 
 const $ = (sel) => document.querySelector(sel);
 
+const supabaseUrl = 'https://wjqdxhnoftymjzrtuxhl.supabase.co'; 
+const supabaseAnonKey = 'eeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndqcWR4aG5vZnR5bWp6cnR1eGhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNDc4NDksImV4cCI6MjA5MTkyMzg0OX0._EHc2_0cU78PuFuyo23DljNNROnA5Lia6piKCwqRIQc';
+
+// 2. Khởi tạo client
+const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+if (!supabase) {
+  console.error('[Supabase] Client chưa được khởi tạo. Kiểm tra SUPABASE_URL / SUPABASE_ANON_KEY.');
+}
+
 /* ── Theme Logic ── */
 const THEME_STORAGE_KEY = 'theme';
 const THEME_MODE_KEY = 'theme-mode';
 const themeButtons = document.querySelectorAll('.theme-toggle-btn');
 const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+const logoutBtn = $('#logoutBtn');
+const userProfile = $('#userProfile');
+const userAvatar = $('#userAvatar');
+const userEmail = $('#userEmail');
+const appHeader = document.querySelector('#appContainer header');
 
 const getSystemTheme = () => (themeMedia.matches ? 'dark' : 'light');
 
@@ -91,16 +105,97 @@ const landingContainer    = $('#landingContainer');
 const appContainer        = $('#appContainer');
 const startAppBtn         = $('#startAppBtn');
 
-initTheme();
+const showLanding = () => {
+  landingContainer?.classList.remove('hidden');
+  appContainer?.classList.add('hidden');
+};
 
-const startApp = () => {
+const showApp = () => {
   landingContainer?.classList.add('hidden');
   appContainer?.classList.remove('hidden');
   appContainer?.classList.add('animate-fade-in');
+  userProfile?.classList.remove('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-startAppBtn?.addEventListener('click', startApp);
+const signInWithGoogle = async () => {
+  try {
+    if (!supabase?.auth) throw new Error('Supabase client chưa sẵn sàng.');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) throw error;
+  } catch (err) {
+    console.error('[Auth] Google sign-in failed:', err);
+  }
+};
+
+const signOut = async () => {
+  try {
+    if (!supabase?.auth) throw new Error('Supabase client chưa sẵn sàng.');
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    window.location.reload();
+  } catch (err) {
+    console.error('[Auth] Sign out failed:', err);
+  }
+};
+
+const updateUserProfile = (user) => {
+  if (!userProfile || !userAvatar || !userEmail) return;
+  if (!user) {
+    userProfile.classList.add('hidden');
+    return;
+  }
+
+  const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || '';
+  const email = user.user_metadata?.email || user.email || 'Người dùng';
+
+  if (avatarUrl) userAvatar.src = avatarUrl;
+  userAvatar.alt = email;
+  userEmail.textContent = email;
+  userProfile.classList.remove('hidden');
+};
+
+const initSession = async () => {
+  try {
+    if (!supabase?.auth) {
+      showLanding();
+      return;
+    }
+
+    const { data } = await supabase.auth.getSession();
+    const sessionUser = data?.session?.user || null;
+    if (sessionUser) {
+      updateUserProfile(sessionUser);
+      showApp();
+    } else {
+      updateUserProfile(null);
+      showLanding();
+    }
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user || null;
+      if (user) {
+        updateUserProfile(user);
+        showApp();
+      } else {
+        updateUserProfile(null);
+        showLanding();
+      }
+    });
+  } catch (err) {
+    console.error('[Auth] Session init failed:', err);
+    showLanding();
+  }
+};
+
+initTheme();
+initSession();
+
+startAppBtn?.addEventListener('click', signInWithGoogle);
+logoutBtn?.addEventListener('click', signOut);
 
 /* ══════════════════
    Tabs Logic
