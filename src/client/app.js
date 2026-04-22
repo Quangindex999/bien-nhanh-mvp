@@ -152,6 +152,7 @@ const updateUserProfile = (user) => {
   if (!userProfile || !userAvatar || !userEmail) return;
   if (!user) {
     userProfile.classList.add("hidden");
+    userProfile.classList.remove("flex");
     return;
   }
 
@@ -162,6 +163,7 @@ const updateUserProfile = (user) => {
   userAvatar.alt = email;
   userEmail.textContent = email;
   userProfile.classList.remove("hidden");
+  userProfile.classList.add("flex");
 };
 
 const initSession = async () => {
