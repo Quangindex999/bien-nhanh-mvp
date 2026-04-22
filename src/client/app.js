@@ -26,6 +26,8 @@ const btnLogout = $("#btnLogout");
 const userProfile = $("#userProfile");
 const userAvatar = $("#userAvatar");
 const userEmail = $("#userEmail");
+const userDropdown = $("#userDropdown");
+const dropdownEmail = $("#dropdownEmail");
 const appHeader = document.querySelector("#appContainer header");
 
 const getSystemTheme = () => (themeMedia.matches ? "dark" : "light");
@@ -162,7 +164,9 @@ const updateUserProfile = (user) => {
   if (avatarUrl) userAvatar.src = avatarUrl;
   userAvatar.alt = email;
   userEmail.textContent = email;
+  if (dropdownEmail) dropdownEmail.textContent = email;
   userProfile.classList.remove("hidden");
+  userDropdown?.classList.add("hidden");
   userProfile.classList.add("flex");
 };
 
@@ -203,7 +207,22 @@ initTheme();
 initSession();
 
 startAppBtn?.addEventListener("click", signInWithGoogle);
-btnLogout?.addEventListener("click", signOut);
+btnLogout?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  userDropdown?.classList.add("hidden");
+  signOut();
+});
+
+userProfile?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  userDropdown?.classList.toggle("hidden");
+});
+
+document.addEventListener("click", (e) => {
+  if (userProfile && !userProfile.contains(e.target)) {
+    userDropdown?.classList.add("hidden");
+  }
+});
 
 /* ══════════════════
    Tabs Logic
