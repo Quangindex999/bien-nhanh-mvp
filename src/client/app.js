@@ -29,6 +29,13 @@ const userEmail = $("#userEmail");
 const userDropdown = $("#userDropdown");
 const dropdownEmail = $("#dropdownEmail");
 const appHeader = document.querySelector("#appContainer header");
+const dashboardContainer = $("#dashboardContainer");
+const workspaceContainer = $("#workspaceContainer");
+const subjectsGrid = $("#subjectsGrid");
+const btnCreateSubject = $("#btnCreateSubject");
+const btnBackToDashboard = $("#btnBackToDashboard");
+let currentSubjectId = null;
+let currentSubjectName = "";
 
 const getSystemTheme = () => (themeMedia.matches ? "dark" : "light");
 
@@ -118,10 +125,36 @@ const showLanding = () => {
   appContainer?.classList.add("hidden");
 };
 
+const showDashboard = () => {
+  dashboardContainer?.classList.remove("hidden");
+  workspaceContainer?.classList.add("hidden");
+  hideAll();
+};
+
+const showWorkspace = () => {
+  dashboardContainer?.classList.add("hidden");
+  workspaceContainer?.classList.remove("hidden");
+  appContainer?.classList.remove("hidden");
+  appContainer?.classList.add("animate-fade-in");
+  userProfile?.classList.remove("hidden");
+  if (btnBackToDashboard) {
+    btnBackToDashboard.textContent = `← Quay lại • Đang mở: ${currentSubjectName || "Môn học"}`;
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
 const showApp = () => {
   landingContainer?.classList.add("hidden");
   appContainer?.classList.remove("hidden");
   appContainer?.classList.add("animate-fade-in");
+
+  // LOGIC GIỮ TRẠNG THÁI MÀN HÌNH:
+  if (currentSubjectId) {
+    showWorkspace(); // Nếu đang mở môn học, giữ nguyên màn hình Upload
+  } else {
+    showDashboard(); // Nếu chưa mở môn nào, hiện danh sách Dashboard
+  }
+
   userProfile?.classList.remove("hidden");
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
@@ -144,6 +177,12 @@ const signOut = async () => {
     if (!supabase?.auth) throw new Error("Supabase client chưa sẵn sàng.");
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    currentSubjectId = null;
+    currentSubjectName = "";
+    subjectsGrid && (subjectsGrid.innerHTML = "");
+    btnBackToDashboard &&
+      (btnBackToDashboard.textContent = "← Quay lại danh sách Môn học");
+    userDropdown?.classList.add("hidden");
     window.location.reload();
   } catch (err) {
     console.error("[Auth] Sign out failed:", err);
@@ -155,10 +194,12 @@ const updateUserProfile = (user) => {
   if (!user) {
     userProfile.classList.add("hidden");
     userProfile.classList.remove("flex");
+    userDropdown?.classList.add("hidden");
     return;
   }
 
-  const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || "";
+  const avatarUrl =
+    user.user_metadata?.avatar_url || user.user_metadata?.picture || "";
   const email = user.user_metadata?.email || user.email || "Người dùng";
 
   if (avatarUrl) userAvatar.src = avatarUrl;
@@ -170,6 +211,94 @@ const updateUserProfile = (user) => {
   userProfile.classList.add("flex");
 };
 
+const openSubject = (subjectId, subjectName) => {
+  currentSubjectId = subjectId;
+  currentSubjectName = subjectName || "Môn học";
+  showWorkspace();
+};
+
+const renderSubjectCard = (subject) => {
+  const cardHTML = `
+  <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-white/10 hover:border-brand-400 dark:hover:border-brand-500 cursor-pointer transition-all shadow-sm hover:shadow-md group relative overflow-hidden" onclick="openSubject('${subject.id}', '${escapeHtml(subject.name ?? "").replace(/'/g, "&#39;")}')">
+    <div class="absolute inset-0 bg-brand-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+    <div class="relative z-10 flex items-center gap-3 mb-3">
+      <div class="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+        </svg>
+      </div>
+      <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-2">${escapeHtml(subject.name ?? "Chưa đặt tên")}</h3>
+    </div>
+    <p class="relative z-10 text-sm text-slate-500 dark:text-slate-400">Bấm để quản lý tài liệu</p>
+  </div>
+`;
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = cardHTML.trim();
+  return wrapper.firstElementChild;
+};
+
+const loadSubjects = async () => {
+  if (!subjectsGrid || !supabase?.from) return;
+  subjectsGrid.innerHTML =
+    '<div class="col-span-full rounded-2xl border border-dashed border-slate-300/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-5 py-8 text-center text-slate-500 dark:text-slate-400">Đang tải môn học...</div>';
+
+  try {
+    const { data, error } = await supabase
+      .from("subjects")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    const subjects = Array.isArray(data) ? data : [];
+    if (subjects.length === 0) {
+      subjectsGrid.innerHTML =
+        '<div class="col-span-full rounded-2xl border border-dashed border-slate-300/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-5 py-8 text-center text-slate-500 dark:text-slate-400">Chưa có môn học nào. Hãy tạo môn đầu tiên!</div>';
+      return;
+    }
+
+    subjectsGrid.innerHTML = "";
+    subjects.forEach((subject) => {
+      subjectsGrid.appendChild(renderSubjectCard(subject));
+    });
+  } catch (err) {
+    console.error("[Subjects] Load failed:", err);
+    subjectsGrid.innerHTML =
+      '<div class="col-span-full rounded-2xl border border-red-200 bg-red-50 px-5 py-8 text-center text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">Không thể tải danh sách môn học.</div>';
+  }
+};
+
+const createSubject = async () => {
+  const subjectName = window.prompt("Nhập tên môn học mới:")?.trim();
+  if (!subjectName) return;
+
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData?.session?.user?.id;
+    if (!userId) throw new Error("Không tìm thấy người dùng đăng nhập.");
+
+    const { error } = await supabase
+      .from("subjects")
+      .insert([{ name: subjectName, user_id: userId }]);
+    if (error) throw error;
+
+    await loadSubjects();
+  } catch (err) {
+    console.error("[Subjects] Create failed:", err);
+    window.alert(err?.message ?? "Không thể tạo môn học mới.");
+  }
+};
+
+const resetWorkspaceState = () => {
+  currentSubjectId = null;
+  hideAll();
+  clearSelection();
+  setLoading(false);
+};
+
+// Biến cờ (flag) để theo dõi xem đã tải lần đầu chưa, tránh load lại khi chuyển tab
+let isInitialLoadDone = false;
+
 const initSession = async () => {
   try {
     if (!supabase?.auth) {
@@ -177,25 +306,53 @@ const initSession = async () => {
       return;
     }
 
-    const { data } = await supabase.auth.getSession();
-    const sessionUser = data?.session?.user || null;
+    // Lấy session ngay khi load trang
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      console.error("[Auth] Get session error:", error);
+      showLanding();
+      return;
+    }
+
+    const sessionUser = session?.user || null;
+
     if (sessionUser) {
       updateUserProfile(sessionUser);
-      showApp();
+      showApp(); // Hiển thị khung sườn app trước
+
+      // Tải môn học nếu chưa tải
+      if (!isInitialLoadDone) {
+        await loadSubjects();
+        isInitialLoadDone = true;
+      }
     } else {
       updateUserProfile(null);
       showLanding();
     }
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-      const user = session?.user || null;
-      if (user) {
+    // Lắng nghe thay đổi trạng thái
+    supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      const user = currentSession?.user || null;
+
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
         updateUserProfile(user);
         showApp();
-      } else {
+
+        // Nếu user mới sign in (chưa load môn học), thì tải
+        if (!isInitialLoadDone && user) {
+          await loadSubjects();
+          isInitialLoadDone = true;
+        }
+      } else if (event === "SIGNED_OUT") {
+        isInitialLoadDone = false;
         updateUserProfile(null);
         showLanding();
       }
+      // BỎ QUA hoàn toàn các event như TOKEN_REFRESHED, USER_UPDATED để tránh giật lag UI
     });
   } catch (err) {
     console.error("[Auth] Session init failed:", err);
@@ -224,14 +381,21 @@ document.addEventListener("click", (e) => {
   }
 });
 
+window.openSubject = openSubject;
+btnCreateSubject?.addEventListener("click", createSubject);
+btnBackToDashboard?.addEventListener("click", () => {
+  resetWorkspaceState();
+  showDashboard();
+  btnBackToDashboard.textContent = "← Quay lại danh sách Môn học";
+});
+
 /* ══════════════════
    Tabs Logic
    ══════════════════ */
 
 const TAB_ACTIVE =
   "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-brand-500 text-white shadow-lg shadow-brand-500/30";
-const TAB_INACTIVE =
-  "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10";
+const TAB_INACTIVE = "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white";
 
 const switchTab = (tab) => {
   const tabMap = {
@@ -650,8 +814,17 @@ uploadBtn.addEventListener("click", async () => {
   setLoading(true);
 
   try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData?.session?.user?.id;
+
+    if (!userId) {
+      throw new Error("Bạn chưa đăng nhập hoặc phiên đã hết hạn.");
+    }
+
     const formData = new FormData();
     formData.append("pdfFile", selectedFile);
+    if (currentSubjectId) formData.append("subjectId", currentSubjectId);
+    formData.append("userId", userId); // <=== BỎ THẺ ID VÀO GÓI HÀNG
 
     const res = await fetch("/api/upload", { method: "POST", body: formData });
     const json = await res.json();

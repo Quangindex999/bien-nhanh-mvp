@@ -1,12 +1,12 @@
-import pdfParse from 'pdf-parse-fork';
-import mammoth from 'mammoth';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import crypto from 'crypto';
-import { supabase } from '../config/supabase.js';
+import pdfParse from "pdf-parse-fork";
+import mammoth from "mammoth";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import crypto from "crypto";
+import { supabase } from "../config/supabase.js";
 
 /* ── Khởi tạo Gemini client ── */
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '');
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-lastest" });
 
 /* ── System prompt: ép AI trả JSON thuần, không markdown ── */
 const buildPrompt = (text) => `
@@ -65,102 +65,146 @@ ${text}
 
 /**
  * Nhận file PDF → bóc text → gửi Gemini AI → trả JSON Flashcards.
+ * Hỗ trợ Global Cache: Chia sẻ kết quả AI cho mọi User tải cùng 1 file.
  */
 export const handlePdfUpload = async (req, res, _next) => {
   try {
     const file = req?.file;
-    
-    // Fix encoding for Vietnamese filename
-    const safeFileName = file ? Buffer.from(file.originalname, 'latin1').toString('utf8') : '';
+    const { subjectId, userId } = req.body;
 
-    console.log("=== KIỂM TRA FILE UPLOAD ===");
-    console.log("- Tên file (đã fix code):", safeFileName);
-    console.log("- Dung lượng:", file?.size, "bytes");
-    console.log("- Mimetype:", file?.mimetype);
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Vui lòng đăng nhập để sử dụng tính năng này.",
+      });
+    }
+
+    const safeFileName = file
+      ? Buffer.from(file.originalname, "latin1").toString("utf8")
+      : "";
 
     if (!file) {
       return res.status(400).json({
         success: false,
-        message: 'Không tìm thấy file. Vui lòng upload một file PDF.',
+        message: "Không tìm thấy file. Vui lòng upload một file PDF.",
       });
     }
 
     /* ── Tạo mã vân tay (File Hash) ── */
-    const fileHash = crypto.createHash('sha256').update(file.buffer).digest('hex');
-    console.log(`- File Hash: ${fileHash}`);
+    const fileHash = crypto
+      .createHash("sha256")
+      .update(file.buffer)
+      .digest("hex");
+    console.log(`- File Hash: ${fileHash} | User: ${userId}`);
 
-    /* ── Kiểm tra "Trí nhớ" (Check Supabase Cache) ── */
+    /* ── KIỂM TRA BỘ NHỚ ĐỆM TOÀN CẦU (GLOBAL CACHE) ── */
     try {
-      const { data: cachedData, error: cacheError } = await supabase
-        .from('study_materials')
-        .select('*')
-        .eq('file_hash', fileHash)
-        .single();
-        
-      if (!cacheError && cachedData) {
-        console.log('- Dữ liệu lấy từ Supabase Cache');
-        
-        // Đảm bảo sử dụng document_title để tránh lệch schema
-        const displayTitle = cachedData.document_title || cachedData.file_name || safeFileName;
-        const cachedSummaryStats = cachedData.summary_stats ?? {};
-        
+      // Tìm xem CÓ BẤT KỲ AI trên hệ thống từng tải file này chưa (Bỏ .eq('user_id'))
+      const { data: globalCachedData, error: cacheError } = await supabase
+        .from("study_materials")
+        .select("*")
+        .eq("file_hash", fileHash)
+        .limit(1) // Chỉ cần lấy 1 bản ghi bất kỳ làm bản gốc
+        .maybeSingle();
+
+      if (!cacheError && globalCachedData) {
+        console.log(
+          "⚡ BẮT ĐƯỢC FILE GLOBAL TRÙNG! Đang nhân bản dữ liệu (0s)...",
+        );
+
+        const displayTitle =
+          globalCachedData.document_title ||
+          globalCachedData.file_name ||
+          safeFileName;
+        const cachedSummaryStats = globalCachedData.summary_stats ?? {};
+
+        // 1. TẠO BẢN SAO: Dù lấy dữ liệu của người khác, vẫn phải tạo record mới cho User này
+        // để họ lưu vào Môn học của riêng họ mà không ảnh hưởng tới người kia.
+        const { error: cloneError } = await supabase
+          .from("study_materials")
+          .insert([
+            {
+              file_hash: fileHash,
+              file_name: safeFileName, // Lấy tên file do user này tự đặt
+              user_id: userId,
+              subject_id: subjectId || null,
+              document_title: displayTitle,
+              summary_stats: cachedSummaryStats,
+              flashcards: globalCachedData.flashcards,
+              quizzes: globalCachedData.quizzes,
+            },
+          ]);
+
+        if (cloneError)
+          console.warn("- Lỗi khi nhân bản record:", cloneError.message);
+
+        // 2. Trả kết quả ngay lập tức
         return res.status(200).json({
           success: true,
-          message: 'Tạo Flashcards thành công (từ Cache)!',
+          message: "Tạo Flashcards thành công (từ Global Cache)!",
           data: {
             fileName: safeFileName,
             documentTitle: displayTitle,
             totalPages: cachedSummaryStats?.totalPages || 0,
             totalChars: 0,
             summaryStats: cachedSummaryStats,
-            onePageSummary: cachedSummaryStats.onePageSummary ?? '',
-            studyPlan: Array.isArray(cachedSummaryStats.studyPlan) ? cachedSummaryStats.studyPlan : [],
-            flashcards: cachedData.flashcards,
-            quizzes: cachedData.quizzes
-          }
+            onePageSummary: cachedSummaryStats.onePageSummary ?? "",
+            studyPlan: Array.isArray(cachedSummaryStats.studyPlan)
+              ? cachedSummaryStats.studyPlan
+              : [],
+            flashcards: globalCachedData.flashcards,
+            quizzes: globalCachedData.quizzes,
+          },
         });
       }
     } catch (dbErr) {
-      console.warn('- Lỗi khi check cache Supabase:', dbErr.message);
+      console.warn("- Cache miss hoặc file mới hoàn toàn.");
     }
 
-    /* ── 1. Parse file buffer ── */
+    /* ── TỪ ĐÂY TRỞ XUỐNG LÀ XỬ LÝ FILE MỚI HOÀN TOÀN (GỌI GOOGLE AI) ── */
     let pdfData = null;
-    let fullText = '';
-    const isPdfFile = file.mimetype === 'application/pdf' || file.originalname?.toLowerCase().endsWith('.pdf');
-    const isDocxFile = file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.originalname?.toLowerCase().endsWith('.docx');
+    let fullText = "";
+    const isPdfFile =
+      file.mimetype === "application/pdf" ||
+      file.originalname?.toLowerCase().endsWith(".pdf");
+    const isDocxFile =
+      file.mimetype ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      file.originalname?.toLowerCase().endsWith(".docx");
 
     try {
       if (isPdfFile) {
-        console.log('- Đang bắt đầu parse PDF...');
+        console.log("- Đang bắt đầu parse PDF...");
         pdfData = await pdfParse(file.buffer);
-        fullText = pdfData?.text?.trim() ?? '';
+        fullText = pdfData?.text?.trim() ?? "";
       } else if (isDocxFile) {
-        console.log('- Đang bắt đầu parse DOCX...');
-        const docxResult = await mammoth.extractRawText({ buffer: file.buffer });
-        fullText = docxResult?.value?.trim() ?? '';
+        console.log("- Đang bắt đầu parse DOCX...");
+        const docxResult = await mammoth.extractRawText({
+          buffer: file.buffer,
+        });
+        fullText = docxResult?.value?.trim() ?? "";
       } else {
         return res.status(400).json({
           success: false,
-          message: 'Định dạng file không được hỗ trợ. Chỉ chấp nhận PDF hoặc Word (.docx).',
+          message:
+            "Định dạng file không được hỗ trợ. Chỉ chấp nhận PDF hoặc Word (.docx).",
         });
       }
     } catch (parseErr) {
-      console.warn('[uploadController] Lỗi khi parse file:', parseErr?.message);
+      console.warn("[uploadController] Lỗi khi parse file:", parseErr?.message);
     }
-    console.log('- Nội dung text lấy được (10 ký tự đầu):', fullText.substring(0, 10));
 
     if (!fullText) {
       return res.status(422).json({
         success: false,
         message: isDocxFile
-          ? 'Không đọc được nội dung chữ từ file Word này để gửi cho AI.'
-          : 'Không đọc được nội dung chữ từ file PDF này để gửi cho AI (có thể file chỉ chứa hình ảnh).',
+          ? "Không đọc được nội dung chữ từ file Word này để gửi cho AI."
+          : "Không đọc được nội dung chữ từ file PDF này để gửi cho AI (có thể file chỉ chứa hình ảnh).",
       });
     }
 
-    /* ── 2. Kích hoạt Gemini API ── */
-    console.log('- Đang gửi prompt tới Gemini AI...');
+    /* ── Gọi Gemini API ── */
+    console.log("- File mới toàn cầu! Đang gửi prompt tới Gemini AI...");
     let parsedGeminiData = null;
     let attempt = 1;
     const MAX_RETRIES = 3;
@@ -168,23 +212,33 @@ export const handlePdfUpload = async (req, res, _next) => {
     while (attempt <= MAX_RETRIES) {
       try {
         console.log(`- Request AI lần ${attempt}/${MAX_RETRIES}...`);
-        const result = await model.generateContent(buildPrompt(fullText));
+        // BẬT CHẾ ĐỘ ÉP BUỘC TRẢ VỀ JSON CHUẨN (Native JSON Mode)
+        const result = await model.generateContent({
+          contents: [
+            { role: "user", parts: [{ text: buildPrompt(fullText) }] },
+          ],
+          generationConfig: {
+            responseMimeType: "application/json",
+          },
+        });
         const aiResponse = result.response.text();
 
-        const jsonStr = aiResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
-        try {
-          parsedGeminiData = JSON.parse(jsonStr);
-        } catch (parseErr) {
-          throw new Error(`AI trả về JSON không hợp lệ: ${parseErr.message}`);
-        }
-
-        console.log('- Gemini trả về JSON hợp lệ!');
+        // const jsonStr = aiResponse
+        //   .replace(/```json/gi, "")
+        //   .replace(/```/g, "")
+        //   .trim();
+        // parsedGeminiData = JSON.parse(jsonStr);
+        // Vì đã ép JSON ở trên, giờ chỉ việc parse thẳng, bỏ luôn đống Regex cắt chuỗi lằng nhằng
+        parsedGeminiData = JSON.parse(aiResponse);
+        console.log("- Gemini trả về JSON hợp lệ!");
         break;
       } catch (err) {
-        console.warn(`[Lần ${attempt}] Lỗi gọi Gemini hoặc parse JSON:`, err?.message);
+        console.warn(`[Lần ${attempt}] Lỗi gọi Gemini:`, err?.message);
         attempt++;
         if (attempt > MAX_RETRIES) {
-          throw new Error('Không thể tạo Flashcards sau nhiều lần thử với AI.');
+          throw new Error(
+            "Server AI đang tắc nghẽn, vui lòng thử lại sau giây lát.",
+          );
         }
       }
     }
@@ -192,83 +246,68 @@ export const handlePdfUpload = async (req, res, _next) => {
     const finalDocumentTitle = parsedGeminiData.documentTitle || safeFileName;
     const finalSummaryStats = {
       ...(parsedGeminiData.summaryStats ?? {}),
-      onePageSummary: parsedGeminiData.onePageSummary ?? '',
-      studyPlan: Array.isArray(parsedGeminiData.studyPlan) ? parsedGeminiData.studyPlan : [],
+      onePageSummary: parsedGeminiData.onePageSummary ?? "",
+      studyPlan: Array.isArray(parsedGeminiData.studyPlan)
+        ? parsedGeminiData.studyPlan
+        : [],
     };
 
-    /* ── 3. Lưu lại thành quả (Save to Supabase) ── */
+    /* ── Lưu lại thành quả MỚI vào Supabase ── */
     try {
-      const { error: upsertError } = await supabase
-        .from('study_materials')
-        .upsert({
-          file_hash: fileHash,
-          file_name: safeFileName,
-          document_title: finalDocumentTitle,
-          summary_stats: finalSummaryStats,
-          flashcards: parsedGeminiData.flashcards,
-          quizzes: parsedGeminiData.quizzes
-        }, { onConflict: 'file_hash' });
+      const { error: insertError } = await supabase
+        .from("study_materials")
+        .insert([
+          {
+            file_hash: fileHash,
+            file_name: safeFileName,
+            user_id: userId,
+            subject_id: subjectId || null,
+            document_title: finalDocumentTitle,
+            summary_stats: finalSummaryStats,
+            flashcards: parsedGeminiData.flashcards,
+            quizzes: parsedGeminiData.quizzes,
+          },
+        ]);
 
-      if (upsertError) {
-        console.warn('- Lỗi khi lưu vào Supabase:', upsertError.message);
+      if (insertError) {
+        console.warn("- Lỗi khi lưu vào Supabase:", insertError.message);
       } else {
-        console.log('- Đã lưu dữ liệu vào Supabase thành công!');
+        console.log("- Đã lưu dữ liệu MỚI vào Supabase thành công!");
       }
     } catch (saveErr) {
-      console.warn('- Lỗi Exception khi lưu Supabase:', saveErr.message);
+      console.warn("- Lỗi Exception khi lưu Supabase:", saveErr.message);
     }
 
-    /* ── 4. Trả kết quả về Frontend ── */
+    /* ── Trả kết quả về Frontend ── */
     return res.status(200).json({
       success: true,
-      message: 'Tạo Flashcards thành công!',
+      message: "Tạo Flashcards thành công!",
       data: {
         fileName: safeFileName,
         documentTitle: finalDocumentTitle,
         totalPages: pdfData?.numpages || 0,
         totalChars: fullText.length,
         summaryStats: finalSummaryStats,
-        onePageSummary: parsedGeminiData.onePageSummary ?? '',
-        studyPlan: Array.isArray(parsedGeminiData.studyPlan) ? parsedGeminiData.studyPlan : [],
+        onePageSummary: parsedGeminiData.onePageSummary ?? "",
+        studyPlan: Array.isArray(parsedGeminiData.studyPlan)
+          ? parsedGeminiData.studyPlan
+          : [],
         flashcards: parsedGeminiData.flashcards,
-        quizzes: parsedGeminiData.quizzes
-      }
+        quizzes: parsedGeminiData.quizzes,
+      },
     });
-
   } catch (error) {
-    console.error('[uploadController] Error:', error?.message ?? error);
+    console.error("[uploadController] Error:", error?.message ?? error);
 
-    /* ── Phân biệt loại lỗi ── */
-    const msg = error?.message?.toLowerCase() ?? '';
-    
-    // Lỗi PDF có mật khẩu
-    if (msg.includes('password')) {
-      return res.status(422).json({
-        success: false,
-        message: 'File PDF này đã bị khóa bằng mật khẩu (Bảo mật). Vui lòng gỡ mật khẩu file hoặc tải lên một tài liệu khác.',
-      });
-    }
-
-    const isPdfError = msg.includes('pdf');
-    const isAiError  = msg.includes('api') || msg.includes('quota') || msg.includes('google') || msg.includes('429');
-
-    if (isPdfError) {
-      return res.status(422).json({
-        success: false,
-        message: 'File PDF không hợp lệ hoặc bị hỏng.',
-      });
-    }
-
-    if (isAiError) {
-      return res.status(503).json({
-        success: false,
-        message: 'Dịch vụ AI tạm thời không khả dụng. Vui lòng thử lại sau.',
-      });
+    if (error?.message?.toLowerCase().includes("password")) {
+      return res
+        .status(422)
+        .json({ success: false, message: "File PDF bị khóa mật khẩu." });
     }
 
     return res.status(500).json({
       success: false,
-      message: 'Đã xảy ra lỗi khi xử lý file.',
+      message: error?.message || "Đã xảy ra lỗi khi xử lý file.",
     });
   }
 };
