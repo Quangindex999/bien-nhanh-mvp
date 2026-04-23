@@ -335,17 +335,26 @@ const initSession = async () => {
     }
 
     // Lắng nghe thay đổi trạng thái
+    // Lắng nghe thay đổi trạng thái
     supabase.auth.onAuthStateChange(async (event, currentSession) => {
       const user = currentSession?.user || null;
 
       if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-        updateUserProfile(user);
-        showApp();
+        // NẾU CÓ USER THÌ MỚI HIỆN APP
+        if (user) {
+          updateUserProfile(user);
+          showApp();
 
-        // Nếu user mới sign in (chưa load môn học), thì tải
-        if (!isInitialLoadDone && user) {
-          await loadSubjects();
-          isInitialLoadDone = true;
+          // Nếu user mới sign in (chưa load môn học), thì tải
+          if (!isInitialLoadDone) {
+            await loadSubjects();
+            isInitialLoadDone = true;
+          }
+        } else {
+          // NẾU KHÔNG CÓ USER (Khách vãng lai), ÉP VỀ LANDING PAGE
+          isInitialLoadDone = false;
+          updateUserProfile(null);
+          showLanding();
         }
       } else if (event === "SIGNED_OUT") {
         isInitialLoadDone = false;
@@ -395,7 +404,8 @@ btnBackToDashboard?.addEventListener("click", () => {
 
 const TAB_ACTIVE =
   "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-brand-500 text-white shadow-lg shadow-brand-500/30";
-const TAB_INACTIVE = "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white";
+const TAB_INACTIVE =
+  "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white";
 
 const switchTab = (tab) => {
   const tabMap = {
