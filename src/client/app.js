@@ -36,6 +36,15 @@ const btnCreateSubject = $("#btnCreateSubject");
 const btnBackToDashboard = $("#btnBackToDashboard");
 let currentSubjectId = null;
 let currentSubjectName = "";
+let userAnswers = {};
+let quizTimer = null;
+let quizSeconds = 0;
+let isQuizSubmitted = false;
+let currentQuizzes = [];
+let quizHeader = null;
+let quizSubmitBtn = null;
+let quizTimeEl = null;
+let quizScoreEl = null;
 
 const getSystemTheme = () => (themeMedia.matches ? "dark" : "light");
 
@@ -119,15 +128,187 @@ const quizList = $("#quizList");
 const landingContainer = $("#landingContainer");
 const appContainer = $("#appContainer");
 const startAppBtn = $("#startAppBtn");
+/* ══════════════════
+   Routing & History API
+   ══════════════════ */
+
+// Hàm đổi URL mà không load lại trang
+const navigate = (path) => {
+  if (window.location.pathname !== path) {
+    window.history.pushState({}, "", path);
+  }
+  handleRoute();
+};
+
+// Hàm quyết định giao diện dựa theo URL và trạng thái đăng nhập
+const handleRoute = async () => {
+  const path = window.location.pathname;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user || null;
+
+  if (path.startsWith("/app")) {
+    if (user) {
+      showApp(); // Đã login, cho vào App
+    } else {
+      navigate("/"); // Chưa login mà mò vào /app -> Đuổi về trang chủ
+    }
+  } else {
+    // Đang ở trang chủ "/"
+    showLanding();
+
+    if (user && startAppBtn) {
+      // Đã login -> Biến nút Đăng nhập thành nút "Đi tới Workspace"
+      startAppBtn.textContent = "Đi tới Workspace";
+      startAppBtn.onclick = (e) => {
+        e.preventDefault();
+        navigate("/app");
+      };
+    } else if (!user && startAppBtn) {
+      // Chưa login -> Nút Đăng nhập bình thường
+      startAppBtn.innerHTML = `
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        Bắt đầu miễn phí
+      `;
+      startAppBtn.onclick = signInWithGoogle;
+    }
+  }
+};
+
+// Bắt sự kiện khi user bấm nút <- (Back) hoặc -> (Forward) trên trình duyệt
+window.addEventListener("popstate", handleRoute);
 
 const showLanding = () => {
   landingContainer?.classList.remove("hidden");
   appContainer?.classList.add("hidden");
 };
 
+const resetQuizState = () => {
+  userAnswers = {};
+  currentQuizzes = [];
+  isQuizSubmitted = false;
+  quizSeconds = 0;
+  if (quizTimer) {
+    clearInterval(quizTimer);
+    quizTimer = null;
+  }
+  if (quizTimeEl) quizTimeEl.textContent = "00:00";
+  if (quizScoreEl) quizScoreEl.classList.add("hidden");
+  if (quizSubmitBtn) quizSubmitBtn.classList.remove("hidden");
+};
+
+const materialsContainer = $("#materialsContainer");
+const materialsList = $("#materialsList");
+
+const getMaterialTitle = (material) =>
+  material?.file_name || material?.document_title || "Tài liệu không tên";
+
+const loadMaterials = async (subjectId) => {
+  if (!materialsContainer || !materialsList || !subjectId || !supabase?.from) return;
+
+  materialsContainer.classList.remove("hidden");
+  materialsList.innerHTML = `
+    <div class="col-span-full rounded-2xl border border-dashed border-slate-300/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-5 py-8 text-center text-slate-600 dark:text-slate-400 font-medium">
+      Đang tải tài liệu...
+    </div>
+  `;
+
+  try {
+    const { data, error } = await supabase
+      .from("study_materials")
+      .select("*")
+      .eq("subject_id", subjectId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    const materials = Array.isArray(data) ? data : [];
+    if (!materials.length) {
+      materialsList.innerHTML = `
+        <div class="col-span-full rounded-2xl border border-dashed border-slate-300/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-5 py-8 text-center text-slate-600 dark:text-slate-400 font-medium">
+          Chưa có tài liệu nào cho môn này
+        </div>
+      `;
+      return;
+    }
+
+    materialsList.innerHTML = materials
+      .map((material) => {
+        const createdAt = material.created_at
+          ? new Date(material.created_at).toLocaleDateString("vi-VN")
+          : "—";
+        const title = escapeHtml(getMaterialTitle(material));
+        return `
+          <button type="button" class="text-left rounded-2xl border border-slate-200 bg-white/80 dark:bg-white/5 dark:border-white/10 p-4 hover:border-brand-400 hover:shadow-md transition-all duration-300 group" data-material='${escapeHtml(JSON.stringify(material)).replace(/'/g, "&#39;")}'>
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-brand-600 dark:group-hover:text-brand-400">${title}</p>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">${createdAt}</p>
+              </div>
+            </div>
+          </button>
+        `;
+      })
+      .join("");
+
+    materialsList.querySelectorAll("[data-material]").forEach((btn, idx) => {
+      btn.addEventListener("click", () => {
+        const material = materials[idx];
+        openMaterial(material);
+      });
+    });
+  } catch (err) {
+    console.error("[Materials] Load failed:", err);
+    materialsList.innerHTML = `
+      <div class="col-span-full rounded-2xl border border-red-200 bg-red-50 px-5 py-8 text-center text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+        Không thể tải lịch sử tài liệu.
+      </div>
+    `;
+  }
+};
+
+const openMaterial = (material) => {
+  if (!material) return;
+  setLoading(true);
+  resetQuizState();
+  const title = getMaterialTitle(material);
+  resultFileName.textContent = `Nội dung: ${title}`;
+
+  const summaryStats = material.summary_stats || {};
+  const flashcards = Array.isArray(material.flashcards) ? material.flashcards : [];
+  const quizzes = Array.isArray(material.quizzes) ? material.quizzes : [];
+
+  renderSummary(summaryStats.onePageSummary || summaryStats.one_page_summary || "");
+  renderStudyPlan(summaryStats.studyPlan || summaryStats.study_plan || []);
+
+  cardCount.textContent = flashcards.length;
+  flashcardsGrid.innerHTML = "";
+  flashcards.forEach((card, index) => flashcardsGrid.appendChild(renderFlashcard(card, index)));
+
+  quizList.innerHTML = "";
+  currentQuizzes = quizzes;
+  quizzes.forEach((quiz, index) => quizList.appendChild(renderQuiz(quiz, index)));
+  renderQuizControls(quizzes.length);
+  switchTab("summary");
+  resultSection.classList.remove("hidden");
+  setLoading(false);
+  if (materialsContainer) materialsContainer.classList.remove("hidden");
+  if (quizTimeEl) quizTimeEl.textContent = "00:00";
+  if (quizScoreEl) quizScoreEl.classList.add("hidden");
+};
+
 const showDashboard = () => {
   dashboardContainer?.classList.remove("hidden");
   workspaceContainer?.classList.add("hidden");
+  materialsContainer?.classList.add("hidden");
   hideAll();
 };
 
@@ -140,6 +321,7 @@ const showWorkspace = () => {
   if (btnBackToDashboard) {
     btnBackToDashboard.textContent = `← Quay lại • Đang mở: ${currentSubjectName || "Môn học"}`;
   }
+  if (materialsContainer) materialsContainer.classList.remove("hidden");
 };
 
 const showApp = () => {
@@ -213,6 +395,7 @@ const openSubject = (subjectId, subjectName) => {
   currentSubjectId = subjectId;
   currentSubjectName = subjectName || "Môn học";
   showWorkspace();
+  loadMaterials(subjectId);
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
@@ -290,9 +473,11 @@ const createSubject = async () => {
 
 const resetWorkspaceState = () => {
   currentSubjectId = null;
+  currentSubjectName = "";
   hideAll();
   clearSelection();
   setLoading(false);
+  resetQuizState();
 };
 
 // Biến cờ (flag) để theo dõi xem đã tải lần đầu chưa, tránh load lại khi chuyển tab
@@ -301,7 +486,7 @@ let isInitialLoadDone = false;
 const initSession = async () => {
   try {
     if (!supabase?.auth) {
-      showLanding();
+      navigate("/");
       return;
     }
 
@@ -313,7 +498,7 @@ const initSession = async () => {
 
     if (error) {
       console.error("[Auth] Get session error:", error);
-      showLanding();
+      navigate("/");
       return;
     }
 
@@ -321,7 +506,7 @@ const initSession = async () => {
 
     if (sessionUser) {
       updateUserProfile(sessionUser);
-      showApp(); // Hiển thị khung sườn app trước
+      handleRoute(); // Tự quyết định xem nên ở / hay vào /app
 
       // Tải môn học nếu chưa tải
       if (!isInitialLoadDone) {
@@ -330,48 +515,49 @@ const initSession = async () => {
       }
     } else {
       updateUserProfile(null);
-      showLanding();
+      handleRoute();
     }
 
-    // Lắng nghe thay đổi trạng thái
-    // Lắng nghe thay đổi trạng thái
+    // Lắng nghe thay đổi trạng thái đăng nhập
     supabase.auth.onAuthStateChange(async (event, currentSession) => {
       const user = currentSession?.user || null;
 
       if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-        // NẾU CÓ USER THÌ MỚI HIỆN APP
         if (user) {
           updateUserProfile(user);
-          showApp();
 
-          // Nếu user mới sign in (chưa load môn học), thì tải
+          // NẾU VỪA MỚI ĐĂNG NHẬP XONG, ÉP CHUYỂN HƯỚNG VÀO APP
+          if (event === "SIGNED_IN" && window.location.pathname !== "/app") {
+            navigate("/app");
+          } else {
+            handleRoute();
+          }
+
           if (!isInitialLoadDone) {
             await loadSubjects();
             isInitialLoadDone = true;
           }
         } else {
-          // NẾU KHÔNG CÓ USER (Khách vãng lai), ÉP VỀ LANDING PAGE
           isInitialLoadDone = false;
           updateUserProfile(null);
-          showLanding();
+          if (window.location.pathname !== "/") navigate("/");
         }
       } else if (event === "SIGNED_OUT") {
         isInitialLoadDone = false;
         updateUserProfile(null);
-        showLanding();
+        navigate("/");
       }
-      // BỎ QUA hoàn toàn các event như TOKEN_REFRESHED, USER_UPDATED để tránh giật lag UI
     });
   } catch (err) {
     console.error("[Auth] Session init failed:", err);
-    showLanding();
+    navigate("/");
   }
 };
 
 initTheme();
 initSession();
 
-startAppBtn?.addEventListener("click", signInWithGoogle);
+// startAppBtn?.addEventListener("click", signInWithGoogle);
 btnLogout?.addEventListener("click", (e) => {
   e.stopPropagation();
   userDropdown?.classList.add("hidden");
@@ -653,6 +839,7 @@ const renderStudyPlan = (studyPlan = []) => {
       '<p class="text-slate-500 dark:text-slate-400">Không có dữ liệu</p>';
     return;
   }
+  resetQuizState();
 
   const safePlan = studyPlan.filter((day) => day && typeof day === "object");
   if (safePlan.length === 0) {
@@ -686,20 +873,83 @@ const renderStudyPlan = (studyPlan = []) => {
   `;
 };
 
+const formatQuizTime = (seconds) => {
+  const mins = String(Math.floor(seconds / 60)).padStart(2, "0");
+  const secs = String(seconds % 60).padStart(2, "0");
+  return `${mins}:${secs}`;
+};
+
+const updateQuizHeader = () => {
+  if (quizTimeEl) quizTimeEl.textContent = formatQuizTime(quizSeconds);
+  if (quizScoreEl) {
+    quizScoreEl.classList.toggle("hidden", !isQuizSubmitted);
+  }
+};
+
+const startQuizTimer = () => {
+  if (quizTimer) clearInterval(quizTimer);
+  quizTimer = setInterval(() => {
+    quizSeconds += 1;
+    if (quizTimeEl) quizTimeEl.textContent = formatQuizTime(quizSeconds);
+  }, 1000);
+};
+
+const renderQuizControls = (quizCountValue = 0) => {
+  if (!quizList || !quizContainer) return;
+
+  if (!quizHeader) {
+    quizHeader = document.createElement("div");
+    quizHeader.className = "flex items-center justify-between gap-3 mb-5 rounded-2xl border border-slate-200 bg-white/70 dark:bg-white/5 dark:border-white/10 px-4 py-3";
+    quizHeader.innerHTML = `
+      <div class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+        <span class="inline-flex items-center px-2 py-1 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400">⏱</span>
+        <span id="quizTime">00:00</span>
+      </div>
+      <div id="quizScoreWrap" class="hidden text-sm font-bold text-emerald-600 dark:text-emerald-400">
+        <span id="quizScore">Điểm: 0/0</span>
+      </div>
+    `;
+  }
+
+  quizTimeEl = quizHeader.querySelector("#quizTime");
+  quizScoreEl = quizHeader.querySelector("#quizScoreWrap");
+
+  if (!quizSubmitBtn) {
+    quizSubmitBtn = document.createElement("button");
+    quizSubmitBtn.type = "button";
+    quizSubmitBtn.className = "hidden mt-8 w-full sm:w-auto px-5 py-3 rounded-xl bg-brand-500 text-white font-bold text-sm shadow-md hover:bg-brand-600 transition-colors";
+    quizSubmitBtn.textContent = "Nộp bài hoàn tất";
+    quizSubmitBtn.addEventListener("click", submitQuiz);
+  }
+
+  if (!quizContainer.contains(quizHeader)) {
+    quizContainer.insertBefore(quizHeader, quizList);
+  }
+  if (!quizContainer.contains(quizSubmitBtn)) {
+    quizContainer.appendChild(quizSubmitBtn);
+  }
+
+  if (quizCountValue > 0) {
+    quizSubmitBtn.classList.remove("hidden");
+    if (!quizTimer && !isQuizSubmitted) startQuizTimer();
+  }
+  updateQuizHeader();
+};
+
 const renderQuiz = (quiz, index) => {
   const card = document.createElement("div");
   card.className = `rounded-2xl p-6 transition-all duration-300 ${QUIZ_CLASS_MAP.card}`;
+  card.dataset.quizIndex = String(index);
+  card.dataset.correctAnswer = quiz.correctAnswer;
 
   const questionHeader = document.createElement("h4");
   questionHeader.className =
     "text-lg font-semibold mb-5 leading-relaxed text-gray-900 dark:text-slate-100";
-  questionHeader.innerHTML = `<span class="text-emerald-400 font-bold mr-2">Câu ${index + 1}:</span> ${quiz.question}`;
+  questionHeader.innerHTML = `<span class="text-emerald-600 dark:text-emerald-400 font-bold mr-2">Câu ${index + 1}:</span> ${quiz.question}`;
   card.appendChild(questionHeader);
 
   const optionsGrid = document.createElement("div");
   optionsGrid.className = "grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4";
-
-  let hasAnswered = false;
 
   const explElement = document.createElement("div");
   explElement.className = `hidden mt-4 p-4 rounded-xl border text-sm leading-relaxed ${QUIZ_CLASS_MAP.explanation}`;
@@ -709,29 +959,16 @@ const renderQuiz = (quiz, index) => {
     const btn = document.createElement("button");
     btn.className = `text-left px-5 py-3 rounded-xl border transition-all duration-200 text-sm font-medium ${QUIZ_CLASS_MAP.option}`;
     btn.textContent = opt;
-    // Store original option for comparison
     btn.dataset.original = opt;
 
     btn.addEventListener("click", () => {
-      if (hasAnswered) return;
-      hasAnswered = true;
-
-      // Reveal explanation
-      explElement.classList.remove("hidden");
-      explElement.classList.add("animate-fade-in");
-
-      const isCorrect = opt === quiz.correctAnswer;
-
+      if (isQuizSubmitted) return;
+      userAnswers[index] = opt;
       optionBtns.forEach((b) => {
-        b.disabled = true;
-        b.classList.add("cursor-default", "opacity-70");
-        b.className = `text-left px-5 py-3 rounded-xl border transition-all duration-500 text-sm font-medium ${QUIZ_CLASS_MAP.option}`;
-
-        if (b.dataset.original === quiz.correctAnswer) {
-          b.className = `text-left px-5 py-3 rounded-xl border transition-all duration-500 text-sm font-semibold ${QUIZ_CLASS_MAP.correct} shadow-[0_0_15px_rgba(16,185,129,0.15)]`;
-        } else if (b === btn && !isCorrect) {
-          b.className = `text-left px-5 py-3 rounded-xl border transition-all duration-500 text-sm font-medium ${QUIZ_CLASS_MAP.wrong}`;
-        }
+        const selected = b.dataset.original === opt;
+        b.className = selected
+          ? `text-left px-5 py-3 rounded-xl border transition-all duration-200 text-sm font-medium bg-brand-50 border-brand-500 text-brand-700 dark:bg-brand-500/10 dark:border-brand-500 dark:text-brand-300`
+          : `text-left px-5 py-3 rounded-xl border transition-all duration-200 text-sm font-medium ${QUIZ_CLASS_MAP.option}`;
       });
     });
 
@@ -743,6 +980,56 @@ const renderQuiz = (quiz, index) => {
   card.appendChild(explElement);
 
   return card;
+};
+
+const submitQuiz = () => {
+  if (isQuizSubmitted) return;
+  isQuizSubmitted = true;
+  if (quizTimer) {
+    clearInterval(quizTimer);
+    quizTimer = null;
+  }
+
+  let correctCount = 0;
+  const quizCards = quizList?.querySelectorAll("[data-quiz-index]") || [];
+
+  quizCards.forEach((card) => {
+    const index = Number(card.dataset.quizIndex);
+    const correctAnswer = card.dataset.correctAnswer;
+    const selectedAnswer = userAnswers[index];
+    const buttons = card.querySelectorAll("button[data-original]");
+    const expl = card.querySelector(".hidden.mt-4");
+
+    if (selectedAnswer === correctAnswer) correctCount += 1;
+
+    buttons.forEach((btn) => {
+      btn.disabled = true;
+      const original = btn.dataset.original;
+      const isSelected = original === selectedAnswer;
+      const isCorrect = original === correctAnswer;
+
+      if (isCorrect) {
+        btn.className = `text-left px-5 py-3 rounded-xl border transition-all duration-200 text-sm font-medium ${QUIZ_CLASS_MAP.correct}`;
+      } else if (isSelected && selectedAnswer !== correctAnswer) {
+        btn.className = `text-left px-5 py-3 rounded-xl border transition-all duration-200 text-sm font-medium ${QUIZ_CLASS_MAP.wrong}`;
+      } else {
+        btn.className = `text-left px-5 py-3 rounded-xl border transition-all duration-200 text-sm font-medium ${QUIZ_CLASS_MAP.option}`;
+      }
+    });
+
+    expl?.classList.remove("hidden");
+  });
+
+  if (quizScoreEl) {
+    const scoreLabel = quizScoreEl.querySelector("#quizScore");
+    if (scoreLabel) {
+      scoreLabel.textContent = `Điểm: ${correctCount}/${currentQuizzes.length}`;
+    }
+    quizScoreEl.classList.remove("hidden");
+  }
+
+  if (quizSubmitBtn) quizSubmitBtn.classList.add("hidden");
+  updateQuizHeader();
 };
 
 /* ══════════════════
@@ -824,6 +1111,8 @@ uploadBtn.addEventListener("click", async () => {
   setLoading(true);
 
   try {
+    resetQuizState();
+
     const { data: sessionData } = await supabase.auth.getSession();
     const userId = sessionData?.session?.user?.id;
 
@@ -834,7 +1123,7 @@ uploadBtn.addEventListener("click", async () => {
     const formData = new FormData();
     formData.append("pdfFile", selectedFile);
     if (currentSubjectId) formData.append("subjectId", currentSubjectId);
-    formData.append("userId", userId); // <=== BỎ THẺ ID VÀO GÓI HÀNG
+    formData.append("userId", userId);
 
     const res = await fetch("/api/upload", { method: "POST", body: formData });
     const json = await res.json();
@@ -854,6 +1143,7 @@ uploadBtn.addEventListener("click", async () => {
     const flashcards = Array.isArray(data.flashcards) ? data.flashcards : [];
     const quizzes = Array.isArray(data.quizzes) ? data.quizzes : [];
     const stats = data.summaryStats || data.summary_stats || {};
+    currentQuizzes = quizzes;
 
     // 1. Lấy Tiêu đề
     const docTitle =
@@ -886,6 +1176,8 @@ uploadBtn.addEventListener("click", async () => {
       throw new Error("AI không tạo được flashcard nào từ nội dung PDF này.");
     }
 
+    resetQuizState();
+
     /* ── 2. Render Stats Badges ── */
 
     /* ── 2. Render Stats Badges ── */
@@ -914,8 +1206,10 @@ uploadBtn.addEventListener("click", async () => {
     });
 
     /* ── 3.1. Render Quizzes ── */
+    currentQuizzes = quizzes;
     quizCount.textContent = quizzes.length;
     quizList.innerHTML = "";
+    renderQuizControls(quizzes.length);
     quizzes.forEach((quiz, index) => {
       quizList.appendChild(renderQuiz(quiz, index));
     });
@@ -925,6 +1219,7 @@ uploadBtn.addEventListener("click", async () => {
 
     /* ── 4. Show result ── */
     resultSection.classList.remove("hidden");
+    if (currentSubjectId) loadMaterials(currentSubjectId);
 
     // Scroll to results smoothly
     setTimeout(() => {
