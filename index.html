@@ -314,7 +314,7 @@
         </div>
 
         <div id="workspaceContainer" class="hidden">
-          <button id="btnBackToDashboard" class="mb-6 flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-brand-500 transition-colors">← Quay lại danh sách Môn học</button>
+          <button id="btnBackToDashboard" class="mb-6 flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-brand-500 dark:text-slate-400 transition-colors">← Quay lại danh sách Môn học</button>
 
           <!-- Hero text -->
           <div class="text-center mb-12 animate-fade-in">
@@ -324,7 +324,7 @@
               Upload PDF / Word,<br />nhận trọn bộ ôn thi ngay
             </h2>
             <p
-              class="mt-4 text-gray-700 dark:text-slate-400 max-w-lg mx-auto text-sm leading-relaxed"
+              class="mt-4 text-slate-700 dark:text-slate-400 max-w-lg mx-auto text-sm leading-relaxed"
             >
               Kéo thả file PDF hoặc DOCX — AI sẽ phân tích nội dung và tạo bộ Ghi chú, Flashcards, Quiz giúp bạn ôn tập hiệu quả.
             </p>
@@ -411,9 +411,9 @@
             <div class="min-w-0">
               <p
                 id="fileName"
-                class="text-sm font-medium text-slate-800 dark:text-slate-200 truncate"
+                class="text-sm font-bold text-slate-800 dark:text-slate-200 truncate"
               ></p>
-              <p id="fileSize" class="text-xs text-slate-500"></p>
+              <p id="fileSize" class="text-xs font-medium text-slate-500 dark:text-slate-400"></p>
             </div>
             <button
               id="clearFile"
@@ -507,7 +507,7 @@
               <h3 class="font-bold text-slate-100 text-lg">
                 Flashcards đã sẵn sàng!
               </h3>
-              <p id="resultFileName" class="text-xs text-slate-500"></p>
+              <p id="resultFileName" class="text-xs text-slate-600 dark:text-slate-400"></p>
             </div>
           </div>
 
@@ -521,7 +521,7 @@
           <div class="flex flex-wrap justify-center gap-3 mb-8 mt-2 relative z-20">
             <button
               id="tabSummary"
-              class="px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+              class="px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
             >
               Tóm tắt
             </button>
@@ -533,13 +533,13 @@
             </button>
             <button
               id="tabQuiz"
-              class="px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+              class="px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
             >
               Thi Trắc Nghiệm
             </button>
             <button
               id="tabStudyPlan"
-              class="px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+              class="px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
             >
               Lịch ôn thi
             </button>
@@ -580,7 +580,7 @@
                     />
                   </svg>
                 </div>
-                <p class="text-sm font-semibold text-slate-300">
+                <p class="text-sm font-bold text-slate-700 dark:text-slate-300">
                   Bộ Flashcards ·
                   <span id="cardCount" class="text-brand-600 dark:text-brand-400">0</span> thẻ
                 </p>
@@ -604,7 +604,7 @@
                   class="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center"
                 >
                   <svg
-                    class="w-4 h-4 text-emerald-400"
+                    class="w-4 h-4 text-slate-700 dark:text-slate-300"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -617,7 +617,7 @@
                     />
                   </svg>
                 </div>
-                <p class="text-sm font-semibold text-slate-300">
+                <p class="text-sm font-bold text-slate-700 dark:text-slate-300">
                   Bộ Trắc nghiệm ·
                   <span id="quizCount" class="text-emerald-600 dark:text-emerald-400">0</span> câu
                 </p>
@@ -630,11 +630,11 @@
             <div id="studyPlanContainer" class="hidden mt-2">
               <div class="flex items-center gap-3 mb-5">
                 <div class="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                  <svg class="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <svg class="w-4 h-4 text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <p class="text-sm font-semibold text-slate-300">
+                <p class="text-sm font-bold text-slate-700 dark:text-slate-300">
                   Kế hoạch ôn thi
                 </p>
               </div>

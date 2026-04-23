@@ -140,7 +140,6 @@ const showWorkspace = () => {
   if (btnBackToDashboard) {
     btnBackToDashboard.textContent = `← Quay lại • Đang mở: ${currentSubjectName || "Môn học"}`;
   }
-  window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
 const showApp = () => {
@@ -156,7 +155,6 @@ const showApp = () => {
   }
 
   userProfile?.classList.remove("hidden");
-  window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
 const signInWithGoogle = async () => {
@@ -215,6 +213,7 @@ const openSubject = (subjectId, subjectName) => {
   currentSubjectId = subjectId;
   currentSubjectName = subjectName || "Môn học";
   showWorkspace();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
 const renderSubjectCard = (subject) => {
@@ -229,7 +228,7 @@ const renderSubjectCard = (subject) => {
       </div>
       <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-2">${escapeHtml(subject.name ?? "Chưa đặt tên")}</h3>
     </div>
-    <p class="relative z-10 text-sm text-slate-500 dark:text-slate-400">Bấm để quản lý tài liệu</p>
+    <p class="relative z-10 text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Bấm để quản lý tài liệu</p>
   </div>
 `;
   const wrapper = document.createElement("div");
@@ -240,7 +239,7 @@ const renderSubjectCard = (subject) => {
 const loadSubjects = async () => {
   if (!subjectsGrid || !supabase?.from) return;
   subjectsGrid.innerHTML =
-    '<div class="col-span-full rounded-2xl border border-dashed border-slate-300/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-5 py-8 text-center text-slate-500 dark:text-slate-400">Đang tải môn học...</div>';
+    '<div class="col-span-full rounded-2xl border border-dashed border-slate-300/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-5 py-8 text-center text-slate-600 dark:text-slate-400 font-medium">Đang tải môn học...</div>';
 
   try {
     const { data, error } = await supabase
@@ -253,7 +252,7 @@ const loadSubjects = async () => {
     const subjects = Array.isArray(data) ? data : [];
     if (subjects.length === 0) {
       subjectsGrid.innerHTML =
-        '<div class="col-span-full rounded-2xl border border-dashed border-slate-300/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-5 py-8 text-center text-slate-500 dark:text-slate-400">Chưa có môn học nào. Hãy tạo môn đầu tiên!</div>';
+        '<div class="col-span-full rounded-2xl border border-dashed border-slate-300/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-5 py-8 text-center text-slate-600 dark:text-slate-400 font-medium">Chưa có môn học nào. Hãy tạo môn đầu tiên!</div>';
       return;
     }
 
@@ -396,6 +395,7 @@ btnBackToDashboard?.addEventListener("click", () => {
   resetWorkspaceState();
   showDashboard();
   btnBackToDashboard.textContent = "← Quay lại danh sách Môn học";
+  window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
 /* ══════════════════
@@ -590,7 +590,7 @@ const renderFlashcard = (card, index) => {
           <div class="card-content">
             <h4 class="card-question">${card.front}</h4>
           </div>
-          <span class="card-hint">
+          <span class="card-hint text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">
             <svg class="w-3 h-3 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3"/></svg>
             Lật thẻ
           </span>
@@ -602,7 +602,7 @@ const renderFlashcard = (card, index) => {
           <div class="card-content card-content-back">
             <p class="card-answer">${card.back}</p>
           </div>
-          <span class="card-hint card-hint-back">
+          <span class="card-hint card-hint-back text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">
             <svg class="w-3 h-3 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3"/></svg>
             Lật lại
           </span>
@@ -630,7 +630,7 @@ const QUIZ_CLASS_MAP = {
   explanation:
     "bg-gray-50 border-gray-300 text-gray-800 dark:bg-slate-800/50 dark:border-slate-700/50 dark:text-slate-300",
   option:
-    "bg-white border-gray-300 text-gray-800 hover:bg-gray-50 hover:border-emerald-400/50 dark:bg-white/5 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:border-emerald-500/50",
+    "bg-white border-gray-300 text-slate-700 hover:bg-gray-50 hover:border-emerald-400/50 dark:bg-white/5 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:border-emerald-500/50",
   correct:
     "bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-300",
   wrong: "bg-red-500/20 border-red-500/50 text-red-700 dark:text-red-300",
@@ -703,7 +703,7 @@ const renderQuiz = (quiz, index) => {
 
   const explElement = document.createElement("div");
   explElement.className = `hidden mt-4 p-4 rounded-xl border text-sm leading-relaxed ${QUIZ_CLASS_MAP.explanation}`;
-  explElement.innerHTML = `<span class="font-semibold text-gray-900 dark:text-white">Giải thích:</span> ${quiz.explanation}`;
+  explElement.innerHTML = `<span class="font-bold text-slate-800 dark:text-slate-200">Giải thích:</span> ${quiz.explanation}`;
 
   const optionBtns = quiz.options.map((opt) => {
     const btn = document.createElement("button");
