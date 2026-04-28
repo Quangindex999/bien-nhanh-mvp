@@ -41,8 +41,11 @@ let quizTimer = null;
 let quizSeconds = 0;
 let isQuizSubmitted = false;
 let currentQuizzes = [];
+let currentMaterialId = null;
+let currentFlashcards = [];
 let quizHeader = null;
 let quizSubmitBtn = null;
+let quizRetakeBtn = null;
 let quizTimeEl = null;
 let quizScoreEl = null;
 
@@ -179,7 +182,20 @@ const handleRoute = async () => {
 };
 
 // Bắt sự kiện khi user bấm nút <- (Back) hoặc -> (Forward) trên trình duyệt
-window.addEventListener("popstate", handleRoute);
+window.addEventListener("popstate", (e) => {
+  if (window.location.pathname.startsWith("/app")) {
+    if (window.location.hash === "#workspace" && e.state && e.state.subjectId) {
+      // Nút Forward: Lấy ID từ state và mở lại môn học (truyền true để không push state vòng lặp)
+      openSubject(e.state.subjectId, e.state.subjectName, true);
+      return; // Dừng tại đây
+    } else if (window.location.hash !== "#workspace") {
+      // Nút Back: Quay về Dashboard
+      resetWorkspaceState();
+      showDashboard(); // Đảm bảo UI dashboard hiển thị lại
+    }
+  }
+  handleRoute();
+});
 
 const showLanding = () => {
   landingContainer?.classList.remove("hidden");
@@ -198,7 +214,9 @@ const resetQuizState = () => {
   if (quizTimeEl) quizTimeEl.textContent = "00:00";
   if (quizScoreEl) quizScoreEl.classList.add("hidden");
   if (quizSubmitBtn) quizSubmitBtn.classList.remove("hidden");
+  if (quizRetakeBtn) quizRetakeBtn.classList.add("hidden");
 };
+
 
 const materialsContainer = $("#materialsContainer");
 const materialsList = $("#materialsList");
@@ -219,7 +237,7 @@ const loadMaterials = async (subjectId) => {
   try {
     const { data, error } = await supabase
       .from("study_materials")
-      .select("*")
+      .select("*, quiz_state")
       .eq("subject_id", subjectId)
       .order("created_at", { ascending: false });
 
@@ -242,27 +260,80 @@ const loadMaterials = async (subjectId) => {
           : "—";
         const title = escapeHtml(getMaterialTitle(material));
         return `
-          <button type="button" class="text-left rounded-2xl border border-slate-200 bg-white/80 dark:bg-white/5 dark:border-white/10 p-4 hover:border-brand-400 hover:shadow-md transition-all duration-300 group" data-material='${escapeHtml(JSON.stringify(material)).replace(/'/g, "&#39;")}'>
-            <div class="flex items-start gap-3">
-              <div class="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+          <div class="group relative flex items-center justify-between p-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 hover:border-brand-400 dark:hover:border-brand-500 cursor-pointer transition-all shadow-sm" data-material-id="${material.id}">
+            <div class="flex items-center gap-4 overflow-hidden min-w-0">
+              <div class="w-10 h-10 shrink-0 rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <div class="min-w-0 flex-1">
-                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-brand-600 dark:group-hover:text-brand-400">${title}</p>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">${createdAt}</p>
+              <div class="min-w-0">
+                <h4 class="font-bold text-slate-800 dark:text-slate-100 truncate">${title}</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">${createdAt}</p>
               </div>
             </div>
-          </button>
+
+            <button type="button" class="delete-material-btn p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors shrink-0" aria-label="Xóa tài liệu">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
         `;
       })
       .join("");
 
-    materialsList.querySelectorAll("[data-material]").forEach((btn, idx) => {
+    materialsList.querySelectorAll("[data-material-id]").forEach((btn, idx) => {
       btn.addEventListener("click", () => {
         const material = materials[idx];
+        currentMaterialId = material.id;
+        currentFlashcards = Array.isArray(material.flashcards) ? material.flashcards : [];
+        // Dọn dẹp đồng hồ cũ để chống rò rỉ
+        if (typeof quizTimer !== "undefined" && quizTimer) {
+          clearInterval(quizTimer);
+        }
+
+        // Phục hồi state từ DB
+        let quizState = material.quiz_state;
+        if (typeof quizState === 'string') {
+          try { quizState = JSON.parse(quizState); } catch(e) {}
+        }
+        quizState = quizState || {};
+
+        if (quizState.submitted === true || String(quizState.submitted) === "true") {
+          isQuizSubmitted = true;
+          userAnswers = quizState.answers || {};
+          quizSeconds = Number(quizState.seconds || 0);
+        } else {
+          isQuizSubmitted = false;
+          userAnswers = {};
+          quizSeconds = 0;
+        }
         openMaterial(material);
+      });
+    });
+
+    materialsList.querySelectorAll(".delete-material-btn").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const materialId = btn.closest("[data-material-id]")?.getAttribute("data-material-id");
+        const material = materials.find((item) => String(item.id) === String(materialId));
+        if (!material) return;
+        if (!window.confirm("Bạn có chắc chắn muốn xóa tài liệu này khỏi lịch sử?")) return;
+
+        try {
+          const { error } = await supabase.from("study_materials").delete().eq("id", material.id);
+          if (error) throw error;
+
+          if (getMaterialTitle(material) === fileName?.textContent) {
+            hideAll();
+          }
+
+          await loadMaterials(currentSubjectId);
+        } catch (err) {
+          console.error("Lỗi xóa tài liệu:", err);
+          window.alert("Không thể xóa tài liệu.");
+        }
       });
     });
   } catch (err) {
@@ -286,23 +357,41 @@ const openMaterial = (material) => {
   const flashcards = Array.isArray(material.flashcards) ? material.flashcards : [];
   const quizzes = Array.isArray(material.quizzes) ? material.quizzes : [];
 
+  currentMaterialId = material.id;
+  currentFlashcards = [...flashcards];
+  let quizState = material.quiz_state;
+  if (typeof quizState === 'string') {
+    try { quizState = JSON.parse(quizState); } catch(e) {}
+  }
+  quizState = quizState || {};
+
+  if (quizState.submitted === true || String(quizState.submitted) === "true") {
+    userAnswers = quizState.answers || {};
+    quizSeconds = Number(quizState.seconds || 0);
+    isQuizSubmitted = true;
+  } else {
+    userAnswers = {};
+    quizSeconds = 0;
+    isQuizSubmitted = false;
+  }
+
   renderSummary(summaryStats.onePageSummary || summaryStats.one_page_summary || "");
   renderStudyPlan(summaryStats.studyPlan || summaryStats.study_plan || []);
 
   cardCount.textContent = flashcards.length;
+  if (quizCount) quizCount.textContent = quizzes.length;
   flashcardsGrid.innerHTML = "";
   flashcards.forEach((card, index) => flashcardsGrid.appendChild(renderFlashcard(card, index)));
 
   quizList.innerHTML = "";
   currentQuizzes = quizzes;
   quizzes.forEach((quiz, index) => quizList.appendChild(renderQuiz(quiz, index)));
-  renderQuizControls(quizzes.length);
+  renderQuizControls(currentQuizzes);
+  if (isQuizSubmitted) applyQuizSubmittedState();
   switchTab("summary");
   resultSection.classList.remove("hidden");
   setLoading(false);
   if (materialsContainer) materialsContainer.classList.remove("hidden");
-  if (quizTimeEl) quizTimeEl.textContent = "00:00";
-  if (quizScoreEl) quizScoreEl.classList.add("hidden");
 };
 
 const showDashboard = () => {
@@ -391,7 +480,17 @@ const updateUserProfile = (user) => {
   userProfile.classList.add("flex");
 };
 
-const openSubject = (subjectId, subjectName) => {
+// Thêm tham số isHistoryNav để biết đây là hành động do bấm nút Back/Forward
+const openSubject = (subjectId, subjectName, isHistoryNav = false) => {
+  if (!isHistoryNav) {
+    // Nếu là click bình thường, lưu ID môn học vào hành lý (state) của trình duyệt
+    if (window.location.hash !== "#workspace") {
+      window.history.pushState({ subjectId, subjectName }, "", "/app#workspace");
+    } else {
+      window.history.replaceState({ subjectId, subjectName }, "", "/app#workspace");
+    }
+  }
+
   currentSubjectId = subjectId;
   currentSubjectName = subjectName || "Môn học";
   showWorkspace();
@@ -400,23 +499,49 @@ const openSubject = (subjectId, subjectName) => {
 };
 
 const renderSubjectCard = (subject) => {
+  const title = escapeHtml(subject.name ?? "Chưa đặt tên").replace(/'/g, "&#39;");
   const cardHTML = `
-  <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-white/10 hover:border-brand-400 dark:hover:border-brand-500 cursor-pointer transition-all shadow-sm hover:shadow-md group relative overflow-hidden" onclick="openSubject('${subject.id}', '${escapeHtml(subject.name ?? "").replace(/'/g, "&#39;")}')">
+  <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-white/10 hover:border-brand-400 dark:hover:border-brand-500 cursor-pointer transition-all shadow-sm hover:shadow-md group relative overflow-hidden" onclick="openSubject('${subject.id}', '${title}')">
     <div class="absolute inset-0 bg-brand-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-    <div class="relative z-10 flex items-center gap-3 mb-3">
+    <button type="button" aria-label="Xóa môn học" class="absolute top-3 right-3 z-20 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors" data-delete-subject="${subject.id}">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m-4 0h14" />
+      </svg>
+    </button>
+    <div class="relative z-10 flex items-center gap-3 mb-3 pr-10">
       <div class="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
         </svg>
       </div>
-      <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-2">${escapeHtml(subject.name ?? "Chưa đặt tên")}</h3>
+      <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-2">${title}</h3>
     </div>
     <p class="relative z-10 text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Bấm để quản lý tài liệu</p>
   </div>
 `;
   const wrapper = document.createElement("div");
   wrapper.innerHTML = cardHTML.trim();
-  return wrapper.firstElementChild;
+  const el = wrapper.firstElementChild;
+  el?.querySelector("[data-delete-subject]")?.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (!window.confirm("Bạn có chắc chắn muốn xóa môn học này và toàn bộ tài liệu bên trong?")) return;
+
+    try {
+      const { error: materialsError } = await supabase.from("study_materials").delete().eq("subject_id", subject.id);
+      if (materialsError) throw materialsError;
+      const { error: subjectError } = await supabase.from("subjects").delete().eq("id", subject.id);
+      if (subjectError) throw subjectError;
+      if (currentSubjectId === subject.id) {
+        resetWorkspaceState();
+        showDashboard();
+      }
+      await loadSubjects();
+    } catch (err) {
+      console.error("[Subjects] Delete failed:", err);
+      window.alert(err?.message ?? "Không thể xóa môn học.");
+    }
+  });
+  return el;
 };
 
 const loadSubjects = async () => {
@@ -482,6 +607,7 @@ const resetWorkspaceState = () => {
 
 // Biến cờ (flag) để theo dõi xem đã tải lần đầu chưa, tránh load lại khi chuyển tab
 let isInitialLoadDone = false;
+let activeUserId = null;
 
 const initSession = async () => {
   try {
@@ -505,10 +631,10 @@ const initSession = async () => {
     const sessionUser = session?.user || null;
 
     if (sessionUser) {
+      activeUserId = sessionUser.id;
       updateUserProfile(sessionUser);
       handleRoute(); // Tự quyết định xem nên ở / hay vào /app
 
-      // Tải môn học nếu chưa tải
       if (!isInitialLoadDone) {
         await loadSubjects();
         isInitialLoadDone = true;
@@ -525,13 +651,15 @@ const initSession = async () => {
       if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
         if (user) {
           updateUserProfile(user);
+          const isGenuineLogin = event === "SIGNED_IN" && activeUserId !== user.id;
 
-          // NẾU VỪA MỚI ĐĂNG NHẬP XONG, ÉP CHUYỂN HƯỚNG VÀO APP
-          if (event === "SIGNED_IN" && window.location.pathname !== "/app") {
+          if (isGenuineLogin && window.location.pathname !== "/app") {
             navigate("/app");
           } else {
             handleRoute();
           }
+
+          activeUserId = user.id;
 
           if (!isInitialLoadDone) {
             await loadSubjects();
@@ -539,11 +667,13 @@ const initSession = async () => {
           }
         } else {
           isInitialLoadDone = false;
+          activeUserId = null;
           updateUserProfile(null);
           if (window.location.pathname !== "/") navigate("/");
         }
       } else if (event === "SIGNED_OUT") {
         isInitialLoadDone = false;
+        activeUserId = null;
         updateUserProfile(null);
         navigate("/");
       }
@@ -581,6 +711,7 @@ btnBackToDashboard?.addEventListener("click", () => {
   resetWorkspaceState();
   showDashboard();
   btnBackToDashboard.textContent = "← Quay lại danh sách Môn học";
+  window.history.pushState({}, "", "/app"); // Xóa đuôi #workspace khỏi URL
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
@@ -611,7 +742,13 @@ const switchTab = (tab) => {
 
 tabSummary?.addEventListener("click", () => switchTab("summary"));
 tabFlashcards?.addEventListener("click", () => switchTab("flashcards"));
-tabQuiz?.addEventListener("click", () => switchTab("quiz"));
+tabQuiz?.addEventListener("click", () => {
+  if (isQuizSubmitted && quizTimer) {
+    clearInterval(quizTimer);
+    quizTimer = null;
+  }
+  switchTab("quiz");
+});
 tabStudyPlan?.addEventListener("click", () => switchTab("studyPlan"));
 
 let selectedFile = null;
@@ -635,7 +772,7 @@ const setLoading = (loading) => {
   uploadBtn.disabled = loading;
   btnIconDef.classList.toggle("hidden", loading);
   btnSpinner.classList.toggle("hidden", !loading);
-  btnText.textContent = loading ? "Đang phân tích..." : "Tạo Flashcards";
+  btnText.textContent = loading ? "Đang phân tích..." : "Phân tích";
 };
 
 const showFile = (file) => {
@@ -764,34 +901,31 @@ const formatSummaryMarkdown = (text = "") => {
 const renderFlashcard = (card, index) => {
   const wrapper = document.createElement("div");
   wrapper.className = "flashcard-wrapper";
+  wrapper.dataset.cardId = String(card.id ?? index);
   wrapper.style.animationDelay = `${index * 80}ms`;
 
   wrapper.innerHTML = `
-    <div class="perspective-card">
+    <div class="perspective-card relative">
       <div class="flashcard-inner">
 
         <!-- Mặt trước (Câu hỏi) -->
-        <div class="flashcard-face flashcard-front">
-          <span class="card-badge card-badge-q">Q.${card.id}</span>
+        <div class="flashcard-face flashcard-front p-4 sm:p-6">
+          <span class="card-badge card-badge-q text-[10px] sm:text-xs px-2.5 py-1">Q.${card.id}</span>
           <div class="card-content">
-            <h4 class="card-question">${card.front}</h4>
+            <h4 class="card-question text-base sm:text-lg">${card.front}</h4>
           </div>
-          <span class="card-hint text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">
+          <span class="card-hint text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">
             <svg class="w-3 h-3 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3"/></svg>
             Lật thẻ
           </span>
         </div>
 
         <!-- Mặt sau (Câu trả lời) -->
-        <div class="flashcard-face flashcard-back">
-          <span class="card-badge card-badge-a">A.${card.id}</span>
-          <div class="card-content card-content-back">
-            <p class="card-answer">${card.back}</p>
+        <div class="flashcard-face flashcard-back p-4 sm:p-6">
+          <span class="card-badge card-badge-a text-[10px] sm:text-xs px-2.5 py-1">A.${card.id}</span>
+          <div class="card-content overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <h4 class="card-answer text-base sm:text-lg font-medium text-slate-700 dark:text-slate-200">${escapeHtml(card.back)}</h4>
           </div>
-          <span class="card-hint card-hint-back text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">
-            <svg class="w-3 h-3 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3"/></svg>
-            Lật lại
-          </span>
         </div>
 
       </div>
@@ -839,7 +973,6 @@ const renderStudyPlan = (studyPlan = []) => {
       '<p class="text-slate-500 dark:text-slate-400">Không có dữ liệu</p>';
     return;
   }
-  resetQuizState();
 
   const safePlan = studyPlan.filter((day) => day && typeof day === "object");
   if (safePlan.length === 0) {
@@ -881,9 +1014,8 @@ const formatQuizTime = (seconds) => {
 
 const updateQuizHeader = () => {
   if (quizTimeEl) quizTimeEl.textContent = formatQuizTime(quizSeconds);
-  if (quizScoreEl) {
-    quizScoreEl.classList.toggle("hidden", !isQuizSubmitted);
-  }
+  if (quizScoreEl) quizScoreEl.classList.toggle("hidden", !isQuizSubmitted);
+  if (quizRetakeBtn) quizRetakeBtn.classList.toggle("hidden", !isQuizSubmitted);
 };
 
 const startQuizTimer = () => {
@@ -894,25 +1026,44 @@ const startQuizTimer = () => {
   }, 1000);
 };
 
-const renderQuizControls = (quizCountValue = 0) => {
+const calculateQuizScore = (quizzes, answers) => {
+  if (!quizzes || !Array.isArray(quizzes)) return 0;
+  let score = 0;
+  quizzes.forEach((q, index) => {
+    if (answers[index] === q.correctAnswer) score++;
+  });
+  return score;
+};
+
+const renderQuizControls = (quizzes = []) => {
   if (!quizList || !quizContainer) return;
+  const quizItems = Array.isArray(quizzes) ? quizzes : [];
 
   if (!quizHeader) {
     quizHeader = document.createElement("div");
-    quizHeader.className = "flex items-center justify-between gap-3 mb-5 rounded-2xl border border-slate-200 bg-white/70 dark:bg-white/5 dark:border-white/10 px-4 py-3";
+    quizHeader.className = "flex flex-wrap items-center justify-between gap-3 mb-5 rounded-2xl border border-slate-200 bg-white/70 dark:bg-white/5 dark:border-white/10 px-4 py-3";
     quizHeader.innerHTML = `
       <div class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
         <span class="inline-flex items-center px-2 py-1 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400">⏱</span>
         <span id="quizTime">00:00</span>
       </div>
-      <div id="quizScoreWrap" class="hidden text-sm font-bold text-emerald-600 dark:text-emerald-400">
-        <span id="quizScore">Điểm: 0/0</span>
+      <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+        <button id="quizRetakeBtn" type="button" class="hidden inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-500 text-white font-bold text-sm shadow-md hover:bg-brand-600 transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12a7.5 7.5 0 0112.364-5.894M19.5 12a7.5 7.5 0 01-12.364 5.894M4.5 12H8m11.5 0H16" />
+          </svg>
+          Thi lại
+        </button>
+        <div id="quizScoreWrap" class="hidden text-sm font-bold text-emerald-600 dark:text-emerald-400">
+          <span id="quizScore">Điểm: 0/0</span>
+        </div>
       </div>
     `;
   }
 
   quizTimeEl = quizHeader.querySelector("#quizTime");
   quizScoreEl = quizHeader.querySelector("#quizScoreWrap");
+  quizRetakeBtn = quizHeader.querySelector("#quizRetakeBtn");
 
   if (!quizSubmitBtn) {
     quizSubmitBtn = document.createElement("button");
@@ -922,6 +1073,11 @@ const renderQuizControls = (quizCountValue = 0) => {
     quizSubmitBtn.addEventListener("click", submitQuiz);
   }
 
+  if (quizRetakeBtn && !quizRetakeBtn.dataset.bound) {
+    quizRetakeBtn.dataset.bound = "true";
+    quizRetakeBtn.addEventListener("click", handleRetakeQuiz);
+  }
+
   if (!quizContainer.contains(quizHeader)) {
     quizContainer.insertBefore(quizHeader, quizList);
   }
@@ -929,10 +1085,29 @@ const renderQuizControls = (quizCountValue = 0) => {
     quizContainer.appendChild(quizSubmitBtn);
   }
 
-  if (quizCountValue > 0) {
-    quizSubmitBtn.classList.remove("hidden");
-    if (!quizTimer && !isQuizSubmitted) startQuizTimer();
+  if (quizTimer) {
+    clearInterval(quizTimer);
+    quizTimer = null;
   }
+
+  if (isQuizSubmitted) {
+    const score = calculateQuizScore(quizItems, userAnswers);
+    if (quizTimeEl) quizTimeEl.textContent = formatQuizTime(quizSeconds);
+    if (quizScoreEl) {
+      const scoreLabel = quizScoreEl.querySelector("#quizScore");
+      if (scoreLabel) scoreLabel.textContent = `Điểm: ${score}/${quizItems.length}`;
+      quizScoreEl.classList.remove("hidden"); // Hiện điểm lên thay vì ẩn đi
+    }
+    if (quizRetakeBtn) quizRetakeBtn.classList.remove("hidden");
+    if (quizSubmitBtn) quizSubmitBtn.classList.add("hidden");
+  } else {
+    if (quizTimeEl) quizTimeEl.textContent = formatQuizTime(quizSeconds);
+    if (quizScoreEl) quizScoreEl.classList.add("hidden");
+    if (quizRetakeBtn) quizRetakeBtn.classList.add("hidden");
+    if (quizSubmitBtn) quizSubmitBtn.classList.remove("hidden");
+    if (quizItems.length) startQuizTimer();
+  }
+
   updateQuizHeader();
 };
 
@@ -952,14 +1127,27 @@ const renderQuiz = (quiz, index) => {
   optionsGrid.className = "grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4";
 
   const explElement = document.createElement("div");
-  explElement.className = `hidden mt-4 p-4 rounded-xl border text-sm leading-relaxed ${QUIZ_CLASS_MAP.explanation}`;
+  explElement.className = `${isQuizSubmitted ? "" : "hidden"} quiz-expl mt-4 p-4 rounded-xl border text-sm leading-relaxed ${QUIZ_CLASS_MAP.explanation}`;
   explElement.innerHTML = `<span class="font-bold text-slate-800 dark:text-slate-200">Giải thích:</span> ${quiz.explanation}`;
+
+  const selectedAnswer = userAnswers[index];
 
   const optionBtns = quiz.options.map((opt) => {
     const btn = document.createElement("button");
     btn.className = `text-left px-5 py-3 rounded-xl border transition-all duration-200 text-sm font-medium ${QUIZ_CLASS_MAP.option}`;
     btn.textContent = opt;
     btn.dataset.original = opt;
+    if (isQuizSubmitted) btn.disabled = true;
+
+    if (isQuizSubmitted) {
+      const isCorrect = opt === quiz.correctAnswer;
+      const isWrongSelected = selectedAnswer === opt && selectedAnswer !== quiz.correctAnswer;
+      if (isCorrect) {
+        btn.className = `text-left px-5 py-3 rounded-xl border transition-all duration-200 text-sm font-medium ${QUIZ_CLASS_MAP.correct}`;
+      } else if (isWrongSelected) {
+        btn.className = `text-left px-5 py-3 rounded-xl border transition-all duration-200 text-sm font-medium ${QUIZ_CLASS_MAP.wrong}`;
+      }
+    }
 
     btn.addEventListener("click", () => {
       if (isQuizSubmitted) return;
@@ -982,15 +1170,8 @@ const renderQuiz = (quiz, index) => {
   return card;
 };
 
-const submitQuiz = () => {
-  if (isQuizSubmitted) return;
-  isQuizSubmitted = true;
-  if (quizTimer) {
-    clearInterval(quizTimer);
-    quizTimer = null;
-  }
-
-  let correctCount = 0;
+const applyQuizSubmittedState = () => {
+  const score = calculateQuizScore(currentQuizzes, userAnswers);
   const quizCards = quizList?.querySelectorAll("[data-quiz-index]") || [];
 
   quizCards.forEach((card) => {
@@ -998,9 +1179,7 @@ const submitQuiz = () => {
     const correctAnswer = card.dataset.correctAnswer;
     const selectedAnswer = userAnswers[index];
     const buttons = card.querySelectorAll("button[data-original]");
-    const expl = card.querySelector(".hidden.mt-4");
-
-    if (selectedAnswer === correctAnswer) correctCount += 1;
+    const expl = card.querySelector(".quiz-expl");
 
     buttons.forEach((btn) => {
       btn.disabled = true;
@@ -1023,12 +1202,71 @@ const submitQuiz = () => {
   if (quizScoreEl) {
     const scoreLabel = quizScoreEl.querySelector("#quizScore");
     if (scoreLabel) {
-      scoreLabel.textContent = `Điểm: ${correctCount}/${currentQuizzes.length}`;
+      scoreLabel.textContent = `Điểm: ${score}/${currentQuizzes.length}`;
     }
     quizScoreEl.classList.remove("hidden");
   }
 
   if (quizSubmitBtn) quizSubmitBtn.classList.add("hidden");
+  if (quizRetakeBtn) quizRetakeBtn.classList.remove("hidden");
+};
+
+const submitQuiz = async () => {
+  if (isQuizSubmitted) return;
+  isQuizSubmitted = true;
+  if (quizTimer) {
+    clearInterval(quizTimer);
+    quizTimer = null;
+  }
+
+  const stateToSave = { answers: userAnswers, seconds: quizSeconds, submitted: true };
+
+  try {
+    if (currentMaterialId) {
+      const { error } = await supabase
+        .from("study_materials")
+        .update({ quiz_state: stateToSave })
+        .eq("id", currentMaterialId);
+      if (error) throw error;
+    }
+  } catch (err) {
+    console.error("[Quiz] Save state failed:", err);
+  }
+
+  applyQuizSubmittedState();
+  updateQuizHeader();
+};
+
+const handleRetakeQuiz = async () => {
+  if (!currentMaterialId) return;
+
+  userAnswers = {};
+  quizSeconds = 0;
+  isQuizSubmitted = false;
+  if (quizTimer) {
+    clearInterval(quizTimer);
+    quizTimer = null;
+  }
+
+  try {
+    const { error } = await supabase
+      .from("study_materials")
+      .update({ quiz_state: null })
+      .eq("id", currentMaterialId);
+    if (error) throw error;
+  } catch (err) {
+    console.error("[Quiz] Retake reset failed:", err);
+    window.alert("Không thể thiết lập lại bài thi.");
+    return;
+  }
+
+  quizList.innerHTML = "";
+  currentQuizzes.forEach((quiz, index) => {
+    quizList.appendChild(renderQuiz(quiz, index));
+  });
+  renderQuizControls(currentQuizzes);
+  if (quizSubmitBtn) quizSubmitBtn.classList.remove("hidden");
+  if (!quizTimer) startQuizTimer();
   updateQuizHeader();
 };
 
@@ -1209,10 +1447,11 @@ uploadBtn.addEventListener("click", async () => {
     currentQuizzes = quizzes;
     quizCount.textContent = quizzes.length;
     quizList.innerHTML = "";
-    renderQuizControls(quizzes.length);
+    renderQuizControls(currentQuizzes);
     quizzes.forEach((quiz, index) => {
       quizList.appendChild(renderQuiz(quiz, index));
     });
+    if (isQuizSubmitted) applyQuizSubmittedState();
 
     // Reset tabs to default (summary)
     switchTab("summary");

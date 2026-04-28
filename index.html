@@ -37,7 +37,9 @@
     class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900 font-sans antialiased dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-brand-950 dark:text-white"
   >
     <!-- ═══ LANDING CONTAINER ═══ -->
-    <div id="landingContainer" class="min-h-screen flex flex-col">
+    <div id="landingContainer" class="relative min-h-screen flex flex-col overflow-hidden">
+      <div class="absolute -top-20 -left-20 w-96 h-96 bg-brand-500/20 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
+      <div class="absolute -bottom-28 -right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-[110px] -z-10 pointer-events-none"></div>
       <header
         class="relative overflow-hidden border-b border-slate-200/80 dark:border-white/5 bg-white/70 dark:bg-transparent backdrop-blur-xl"
       >
@@ -120,7 +122,7 @@
                 AI học tập · Flashcards · Quiz · Ôn thi
               </div>
               <div class="space-y-5">
-                <h2 class="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 dark:from-white dark:via-brand-200 dark:to-brand-400 bg-clip-text text-transparent">
+                <h2 class="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
                   Biến tài liệu (PDF, Word) thành bộ ôn thi tiếng Việt trong vài phút
                 </h2>
                 <p class="text-lg sm:text-xl text-slate-700 dark:text-slate-300 leading-relaxed max-w-2xl">
@@ -131,7 +133,7 @@
                 <button
                   id="startAppBtn"
                   type="button"
-                  class="cursor-pointer inline-flex items-center gap-3 px-7 py-4 rounded-2xl text-base font-bold text-white bg-gradient-to-r from-brand-600 via-indigo-600 to-violet-600 shadow-xl shadow-brand-500/25 hover:shadow-brand-500/40 hover:scale-105 transition-all duration-200"
+                  class="cursor-pointer inline-flex items-center gap-3 px-7 py-4 rounded-2xl text-base font-bold text-white bg-gradient-to-r from-brand-500 via-indigo-600 to-violet-600 shadow-lg shadow-brand-500/20 hover:shadow-brand-500/35 hover:scale-105 transition-all duration-200"
                 >
                   <svg class="w-5 h-5 shrink-0" viewBox="0 0 533.5 544.3" aria-hidden="true">
                     <path fill="#4285F4" d="M533.5 278.4c0-18.5-1.5-37-4.7-55.2H272v104.6h147.4c-6.4 34.7-26 64.1-55.6 83.8v69h89.8c52.6-48.4 79.9-119.8 79.9-202.2z"/>
@@ -148,8 +150,8 @@
             </div>
 
             <div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
-              <div class="glass-panel rounded-2xl p-5 border border-white/10">
-                <div class="w-11 h-11 rounded-xl bg-brand-500/15 text-brand-500 flex items-center justify-center mb-4">
+              <div class="glass-panel rounded-2xl p-5 border border-white/5 hover:border-white/20 hover:-translate-y-1 hover:shadow-2xl hover:shadow-brand-500/10 transition-all duration-300">
+                <div class="w-11 h-11 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-4">
                   <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6M8 6h8M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
@@ -157,8 +159,8 @@
                 <h3 class="font-bold text-slate-900 dark:text-white mb-2">Ghi chú 1 trang</h3>
                 <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">Chắt lọc ý chính của tài liệu thành bản tóm tắt rõ ràng, dễ học.</p>
               </div>
-              <div class="glass-panel rounded-2xl p-5 border border-white/10">
-                <div class="w-11 h-11 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center mb-4">
+              <div class="glass-panel rounded-2xl p-5 border border-white/5 hover:border-white/20 hover:-translate-y-1 hover:shadow-2xl hover:shadow-brand-500/10 transition-all duration-300">
+                <div class="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-4">
                   <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4.75 6.75A2.25 2.25 0 017 4.5h10A2.25 2.25 0 0119.25 6.75v10.5A2.25 2.25 0 0117 19.5H7a2.25 2.25 0 01-2.25-2.25V6.75zM7.5 8.25h9M7.5 11.25h9M7.5 14.25h5" />
                   </svg>
@@ -167,7 +169,7 @@
                 <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">Tạo thẻ hỏi đáp ngắn gọn giúp ghi nhớ nhanh các khái niệm cốt lõi.</p>
               </div>
               <div class="glass-panel rounded-2xl p-5 border border-white/10">
-                <div class="w-11 h-11 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center mb-4">
+                <div class="w-11 h-11 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center mb-4">
                   <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75A6.75 6.75 0 1012 5.25a6.75 6.75 0 000 13.5z" />
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v3.75l2.25 1.5" />
@@ -177,7 +179,7 @@
                 <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">Sinh câu hỏi luyện tập với đáp án và giải thích rõ ràng, dễ ôn.</p>
               </div>
               <div class="glass-panel rounded-2xl p-5 border border-white/10">
-                <div class="w-11 h-11 rounded-xl bg-purple-500/15 text-purple-500 flex items-center justify-center mb-4">
+                <div class="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-4">
                   <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
@@ -302,11 +304,11 @@
       <!-- ═══ MAIN ═══ -->
       <main class="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
         <div id="dashboardContainer">
-          <div class="flex items-center justify-between gap-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Các môn học của tôi
             </h2>
-            <button id="btnCreateSubject" class="px-4 py-2 bg-brand-500 text-white rounded-xl text-sm font-bold shadow-md hover:bg-brand-600 transition-colors">
+            <button id="btnCreateSubject" class="w-full sm:w-auto px-4 py-2 bg-brand-500 text-white rounded-xl text-sm font-bold shadow-md hover:bg-brand-600 transition-colors">
               + Tạo môn mới
             </button>
           </div>
@@ -314,7 +316,7 @@
         </div>
 
         <div id="workspaceContainer" class="hidden">
-          <button id="btnBackToDashboard" class="mb-6 flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-brand-500 dark:text-slate-400 transition-colors">← Quay lại danh sách Môn học</button>
+          <button id="btnBackToDashboard" class="mb-6 flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-brand-500 dark:text-slate-400 transition-colors break-words max-w-full">← Quay lại danh sách Môn học</button>
 
           <!-- Hero text -->
           <div class="text-center mb-12 animate-fade-in">
@@ -483,14 +485,14 @@
 
           <div id="materialsContainer" class="hidden mt-10">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-7 h-7 rounded-lg bg-brand-500/10 flex items-center justify-center">
+              <div class="w-7 h-7 rounded-lg bg-brand-500/10 flex items-center justify-center shrink-0">
                 <svg class="w-4 h-4 text-brand-600 dark:text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                 </svg>
               </div>
               <h3 class="text-sm font-bold text-slate-700 dark:text-slate-300">Tài liệu đã phân tích</h3>
             </div>
-            <div id="materialsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            <div id="materialsList" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
           </div>
         </div>
 
