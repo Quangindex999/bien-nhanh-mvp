@@ -115,14 +115,15 @@
       </header>
 
       <main class="flex-1">
-        <section class="max-w-7xl mx-auto px-6 py-16 md:py-20">
-          <div class="grid lg:grid-cols-2 gap-12 items-center">
+        <section class="max-w-7xl mx-auto px-6 py-16 md:py-20 relative overflow-hidden">
+          <div class="absolute top-0 inset-x-0 h-[500px] bg-gradient-to-b from-brand-50/50 to-transparent dark:from-brand-900/20 pointer-events-none"></div>
+          <div class="grid lg:grid-cols-2 gap-12 items-center relative z-10">
             <div class="space-y-8 animate-fade-in">
               <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-brand-500/15 bg-brand-500/10 text-brand-700 dark:text-brand-300 text-xs font-semibold">
                 AI học tập · Flashcards · Quiz · Ôn thi
               </div>
-              <div class="space-y-5">
-                <h2 class="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              <div class="space-y-5 relative">
+                <h2 class="relative text-4xl sm:text-5xl lg:text-6xl font-black leading-tight bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
                   Biến tài liệu (PDF, Word) thành bộ ôn thi tiếng Việt trong vài phút
                 </h2>
                 <p class="text-lg sm:text-xl text-slate-700 dark:text-slate-300 leading-relaxed max-w-2xl">
@@ -133,7 +134,7 @@
                 <button
                   id="startAppBtn"
                   type="button"
-                  class="cursor-pointer inline-flex items-center gap-3 px-7 py-4 rounded-2xl text-base font-bold text-white bg-gradient-to-r from-brand-500 via-indigo-600 to-violet-600 shadow-lg shadow-brand-500/20 hover:shadow-brand-500/35 hover:scale-105 transition-all duration-200"
+                  class="cursor-pointer inline-flex items-center gap-3 px-7 py-4 rounded-2xl text-base font-bold text-white bg-gradient-to-r from-brand-500 via-indigo-600 to-violet-600 shadow-lg shadow-brand-500/20 hover:shadow-brand-500/35 hover:scale-105 transition-all duration-200 animate-pulse hover:animate-none"
                 >
                   <svg class="w-5 h-5 shrink-0" viewBox="0 0 533.5 544.3" aria-hidden="true">
                     <path fill="#4285F4" d="M533.5 278.4c0-18.5-1.5-37-4.7-55.2H272v104.6h147.4c-6.4 34.7-26 64.1-55.6 83.8v69h89.8c52.6-48.4 79.9-119.8 79.9-202.2z"/>
@@ -608,7 +609,7 @@
               <!-- Flashcards Grid -->
               <div
                 id="flashcardsGrid"
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+                class="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-5 pb-8 overflow-x-auto sm:overflow-visible snap-x snap-mandatory hide-scrollbar"
               ></div>
             </div>
 
