@@ -6,7 +6,7 @@ import { supabase } from "../config/supabase.js";
 
 /* ── Khởi tạo Gemini client ── */
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
 /* ── System prompt: ép AI trả JSON thuần, không markdown ── */
 const buildPrompt = (text) => `
@@ -66,7 +66,8 @@ ${text}
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const isGeminiQuotaError = (err) => {
-  const message = `${err?.message ?? ""} ${err?.details ?? ""} ${JSON.stringify(err?.errorDetails ?? [])}`.toLowerCase();
+  const message =
+    `${err?.message ?? ""} ${err?.details ?? ""} ${JSON.stringify(err?.errorDetails ?? [])}`.toLowerCase();
   return (
     message.includes("429 too many requests") ||
     message.includes("quota exceeded") ||
@@ -80,7 +81,8 @@ const getRetryDelayMs = (err) => {
   const retryInfo = `${err?.message ?? ""}`.match(/retry in\s+([0-9.]+)s/i);
   if (retryInfo?.[1]) {
     const seconds = Number.parseFloat(retryInfo[1]);
-    if (Number.isFinite(seconds) && seconds > 0) return Math.ceil(seconds * 1000);
+    if (Number.isFinite(seconds) && seconds > 0)
+      return Math.ceil(seconds * 1000);
   }
   return 0;
 };
@@ -259,7 +261,9 @@ export const handlePdfUpload = async (req, res, _next) => {
         if (isGeminiQuotaError(err)) {
           const delayMs = Math.max(getRetryDelayMs(err), 30_000);
           if (attempt < MAX_RETRIES) {
-            console.warn(`- Phát hiện lỗi quota/rate limit. Đợi ${Math.ceil(delayMs / 1000)} giây trước khi thử lại...`);
+            console.warn(
+              `- Phát hiện lỗi quota/rate limit. Đợi ${Math.ceil(delayMs / 1000)} giây trước khi thử lại...`,
+            );
             await sleep(delayMs);
             attempt++;
             continue;
