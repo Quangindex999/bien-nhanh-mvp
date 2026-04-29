@@ -63,6 +63,28 @@ ${text}
 ---
 `;
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isGeminiQuotaError = (err) => {
+  const message = `${err?.message ?? ""} ${err?.details ?? ""} ${JSON.stringify(err?.errorDetails ?? [])}`.toLowerCase();
+  return (
+    message.includes("429 too many requests") ||
+    message.includes("quota exceeded") ||
+    message.includes("free_tier") ||
+    message.includes("rate limit") ||
+    message.includes("retry in")
+  );
+};
+
+const getRetryDelayMs = (err) => {
+  const retryInfo = `${err?.message ?? ""}`.match(/retry in\s+([0-9.]+)s/i);
+  if (retryInfo?.[1]) {
+    const seconds = Number.parseFloat(retryInfo[1]);
+    if (Number.isFinite(seconds) && seconds > 0) return Math.ceil(seconds * 1000);
+  }
+  return 0;
+};
+
 /**
  * Nhận file PDF → bóc text → gửi Gemini AI → trả JSON Flashcards.
  * Hỗ trợ Global Cache: Chia sẻ kết quả AI cho mọi User tải cùng 1 file.
@@ -234,6 +256,20 @@ export const handlePdfUpload = async (req, res, _next) => {
         break;
       } catch (err) {
         console.warn(`[Lần ${attempt}] Lỗi gọi Gemini:`, err?.message);
+        if (isGeminiQuotaError(err)) {
+          const delayMs = Math.max(getRetryDelayMs(err), 30_000);
+          if (attempt < MAX_RETRIES) {
+            console.warn(`- Phát hiện lỗi quota/rate limit. Đợi ${Math.ceil(delayMs / 1000)} giây trước khi thử lại...`);
+            await sleep(delayMs);
+            attempt++;
+            continue;
+          }
+
+          throw new Error(
+            "Gemini đang hết quota hoặc bị giới hạn tạm thời. Vui lòng thử lại sau hoặc kiểm tra billing/quota của API key.",
+          );
+        }
+
         attempt++;
         if (attempt > MAX_RETRIES) {
           throw new Error(
@@ -303,6 +339,14 @@ export const handlePdfUpload = async (req, res, _next) => {
       return res
         .status(422)
         .json({ success: false, message: "File PDF bị khóa mật khẩu." });
+    }
+
+    if (isGeminiQuotaError(error)) {
+      return res.status(429).json({
+        success: false,
+        message:
+          "Gemini hiện đã hết quota hoặc đang bị giới hạn tạm thời. Vui lòng thử lại sau hoặc kiểm tra billing/quota của API key.",
+      });
     }
 
     return res.status(500).json({
